@@ -1,0 +1,235 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: &docs
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+  pull_request:
+    paths-ignore: *docs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Decides which jobs a change needs. Changes to workflows or build tooling
+  # run everything.
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      web: ${{ steps.filter.outputs.web }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+      image: ${{ steps.filter.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            shared: &shared
+              - ".github/workflows/**"
+              - "Makefile"
+            go:
+              - *shared
+              - "**.go"
+              - "go.mod"
+              - "go.sum"
+              - ".golangci.yml"
+              - "mod/**"
+            web:
+              - *shared
+              - "web/**"
+            e2e:
+              - *shared
+              - "**.go"
+              - "go.mod"
+              - "go.sum"
+              - "web/**"
+              - "mod/**"
+              - "scripts/**"
+              - "test/**"
+            image:
+              - *shared
+              - "**.go"
+              - "go.mod"
+              - "go.sum"
+              - "web/**"
+              - "Dockerfile"
+              - "build/package/**"
+              - ".goreleaser.yaml"
+
+  go-test:
+    name: Go test (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Check go.mod is tidy
+        run: go mod tidy -diff
+      - run: go vet ./...
+      - run: go test ./...
+
+  go-lint:
+    name: Go lint
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0
+      - name: Lint for Windows and macOS too
+        run: |
+          GOOS=windows golangci-lint run ./...
+          GOOS=darwin golangci-lint run ./...
+      - name: Lint workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+
+  web:
+    name: Web client
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm run check
+      - run: pnpm run test
+      - run: pnpm run build
+
+  e2e:
+    name: End to end
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: pnpm
+          cache-dependency-path: |
+            web/pnpm-lock.yaml
+            test/browser/pnpm-lock.yaml
+      - name: Install herdr-core
+        run: |
+          curl -fsSL https://releases.herdr.dev/core/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Build
+        run: make web build
+      - name: Install the browser
+        working-directory: test/browser
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+      - name: Go end-to-end tests (isolated herdr-core)
+        run: |
+          state=$(mktemp -d)
+          export HERDR_SHARE_HC_TEST=1 HC_SESSION=ci-go XDG_STATE_HOME="$state" XDG_CONFIG_HOME="$state/config"
+          hc server start
+          go test -count=1 ./internal/hcclient/ ./test/e2e/
+          hc server stop
+      - name: Full end-to-end (CLI, relay, browser)
+        run: scripts/e2e.sh
+
+  image:
+    name: Container image
+    needs: changes
+    if: needs.changes.outputs.image == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          # A separate cache: this job cross-compiles every platform, which
+          # the shared cache saved by other jobs does not contain.
+          cache-dependency-path: |
+            go.sum
+            .goreleaser.yaml
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Build web client
+        working-directory: web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+      - uses: docker/setup-buildx-action@v4
+      - name: GoReleaser config
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: check
+      - name: Build snapshot images
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean --skip=sbom
+      - name: Smoke test image
+        run: |
+          image=ghcr.io/jtsang4/herdr-share-relay:latest-amd64
+          docker run -d --name relay -p 8080:8080 -e HERDR_SHARE_TOKENS=smoke "$image"
+          for _ in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' relay)
+            [ "$status" = healthy ] && break
+            sleep 2
+          done
+          docker inspect -f '{{.State.Health.Status}}' relay | grep -qx healthy
+          curl -fsS http://127.0.0.1:8080/healthz
+          curl -fsS http://127.0.0.1:8080/api/v1/info | grep -q '"auth_required":true'
+          curl -fsS http://127.0.0.1:8080/s/abcdefghijklmnopqrstuv | grep -qi '<!doctype html>'
+      - name: Build the source Dockerfile
+        run: docker build -t herdr-share-relay:source .
+      - name: Container logs
+        if: failure()
+        run: docker logs relay || true

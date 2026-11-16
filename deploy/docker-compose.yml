@@ -1,0 +1,33 @@
+# A relay behind Caddy with automatic HTTPS.
+#   1. Point DNS for share.example.com at this host.
+#   2. Put one or more tokens in .env: HERDR_SHARE_TOKENS=token-for-alice,token-for-bob
+#   3. docker compose up -d
+services:
+  relay:
+    image: ghcr.io/jtsang4/herdr-share-relay:latest
+    restart: unless-stopped
+    environment:
+      HERDR_SHARE_PUBLIC_URL: https://share.example.com
+      HERDR_SHARE_TOKENS: ${HERDR_SHARE_TOKENS:?set HERDR_SHARE_TOKENS in .env}
+      HERDR_SHARE_TRUST_PROXY: "true"
+      HERDR_SHARE_MAX_TTL: 24h
+      HERDR_SHARE_LOG_FORMAT: json
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - relay
+
+volumes:
+  caddy-data:
+  caddy-config:
