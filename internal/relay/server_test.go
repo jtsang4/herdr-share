@@ -6,6 +6,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
+	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -310,5 +313,43 @@ func TestLimiter(t *testing.T) {
 	}
 	if !l.allow("b") {
 		t.Fatal("keys are independent")
+	}
+}
+
+// Behind a proxy that strips a path prefix, a share page's assets and the
+// viewer WebSocket resolve under the prefix.
+func TestBehindPathPrefix(t *testing.T) {
+	s, hs := newTestServer(t, Config{})
+	if !s.web.ok {
+		t.Skip("web client not built")
+	}
+	target, _ := url.Parse(hs.URL)
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	front := httptest.NewServer(http.StripPrefix("/herdr", proxy))
+	t.Cleanup(front.Close)
+
+	page := front.URL + "/herdr/s/abcdefghijklmnopqrstuv"
+	resp, err := http.Get(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	m := regexp.MustCompile(`"(\.\./_app/[^"]+\.js)"`).FindSubmatch(body)
+	if m == nil {
+		t.Fatalf("no relative script in %s", body)
+	}
+	base, _ := url.Parse(page)
+	asset := base.ResolveReference(&url.URL{Path: string(m[1])})
+	if !strings.HasPrefix(asset.Path, "/herdr/_app/") {
+		t.Fatalf("asset resolves to %s", asset.Path)
+	}
+	resp, err = http.Get(asset.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || !strings.Contains(resp.Header.Get("Cache-Control"), "immutable") {
+		t.Fatalf("asset %s: %d %q", asset, resp.StatusCode, resp.Header.Get("Cache-Control"))
 	}
 }
