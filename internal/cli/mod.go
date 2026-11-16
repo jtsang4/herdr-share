@@ -13,8 +13,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	mod "github.com/jtsang4/herdr-share/herdr"
 	"github.com/jtsang4/herdr-share/internal/config"
-	"github.com/jtsang4/herdr-share/mod"
 )
 
 // AppHome is the Herdr app's folder: $HERDR_APP_HOME, else

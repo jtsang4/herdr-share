@@ -22,8 +22,9 @@ they may type. Traffic between the sharer's bridge and viewers is end-to-end enc
 - `internal/guest`: a Go viewer, used by tests.
 - `web/`: the viewer page, a SvelteKit SPA. `web/embed.go` embeds `web/build/app`; `web/build/.gitkeep`
   must stay so Go compiles without a web build.
-- `mod/herdr-share/`: the Herdr mod, embedded into the CLI by `mod/embed.go` and installed by
-  `herdr-share mod install`.
+- `herdr/herdr-share/`: the Herdr mod's herdr.dev listing (`RECIPE.md`, `preview.png`, `keys.json`)
+  and its only source, `mods/herdr-share/`, embedded into the CLI by `herdr/embed.go` and installed
+  by `herdr-share mod install`. Keep `RECIPE.md` in step with the mod.
 - `build/package/Dockerfile`: the release image (GoReleaser, prebuilt binaries); `Dockerfile`: the
   image from source.
 - `build/npm`: the `herdr-share` npm launcher. It contains no binary; it downloads release assets

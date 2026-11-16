@@ -26,6 +26,6 @@ node_modules/
 Thumbs.db
 
 # Written by `herdr-app check` into the mod folder it checks
-/mod/**/gpui-kit.d.ts
-/mod/**/herdr.d.ts
-/mod/**/jsconfig.json
+/herdr/**/gpui-kit.d.ts
+/herdr/**/herdr.d.ts
+/herdr/**/jsconfig.json

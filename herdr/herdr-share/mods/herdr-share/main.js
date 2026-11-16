@@ -62,8 +62,10 @@ export default class HerdrShare extends View {
   init(_props, cx) {
     this.handle = cx.focus_handle();
     this.handle.focus();
-    this.bin = "herdr-share";
-    this.binArgs = [];
+    // Without install.json (installed from herdr.dev rather than by
+    // `herdr-share mod install`), run herdr-share through npx.
+    this.bin = "npx";
+    this.binArgs = ["--prefer-offline", "-y", "herdr-share"];
     this.home = "";
     this.loading = true;
     this.busy = null; // what is running: "start", "mode", "stop", ...
@@ -109,8 +111,10 @@ export default class HerdrShare extends View {
   async locate() {
     const text = await readTextFile(`${appHome()}/mods/herdr-share/install.json`).catch(() => null);
     const info = text ? parseJSON(text) : null;
-    if (info?.bin) this.bin = info.bin;
-    if (Array.isArray(info?.args)) this.binArgs = info.args;
+    if (info?.bin) {
+      this.bin = info.bin;
+      this.binArgs = Array.isArray(info.args) ? info.args : [];
+    }
     if (info?.home) this.home = info.home;
   }
 

@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	mod "github.com/jtsang4/herdr-share/herdr"
 	"github.com/jtsang4/herdr-share/internal/hcclient"
 	"github.com/jtsang4/herdr-share/internal/version"
-	"github.com/jtsang4/herdr-share/mod"
 )
 
 type check struct {

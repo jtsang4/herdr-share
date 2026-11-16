@@ -48,7 +48,7 @@ jobs:
               - "go.mod"
               - "go.sum"
               - ".golangci.yml"
-              - "mod/**"
+              - "herdr/**"
             web:
               - *shared
               - "web/**"
@@ -58,7 +58,7 @@ jobs:
               - "go.mod"
               - "go.sum"
               - "web/**"
-              - "mod/**"
+              - "herdr/**"
               - "scripts/**"
               - "test/**"
             npm:

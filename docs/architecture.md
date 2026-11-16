@@ -4,7 +4,7 @@ herdr-share has four parts:
 
 | Part | Where | Code |
 |---|---|---|
-| **Share dialog** (Herdr mod) | the sharer's Herdr window | `mod/herdr-share/` |
+| **Share dialog** (Herdr mod) | the sharer's Herdr window | `herdr/herdr-share/mods/herdr-share/` |
 | **CLI and bridge** (`herdr-share`) | the sharer's machine | `cmd/herdr-share`, `internal/{cli,bridge,hcclient,control,store,config}` |
 | **Relay** (`herdr-share-relay`) | a server you deploy | `cmd/herdr-share-relay`, `internal/relay` |
 | **Viewer page** | the viewer's browser, served by the relay | `web/` (SvelteKit, embedded by `web/embed.go`) |

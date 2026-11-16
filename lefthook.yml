@@ -24,7 +24,7 @@ pre-commit:
       run: node --check {staged_files}
 
     - name: mod syntax
-      root: "mod/herdr-share/"
+      root: "herdr/herdr-share/mods/herdr-share/"
       glob: "*.js"
       run: node --check {staged_files}
 

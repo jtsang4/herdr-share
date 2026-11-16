@@ -38,7 +38,8 @@ make hooks       # optional pre-commit hooks (lefthook)
   `%w`. Must build and lint for Linux, macOS and Windows (`GOOS=windows golangci-lint run ./...`).
 - Web: Svelte 5 runes and SvelteKit (adapter-static). Use the project skills in `.agents/skills/`
   and run `npx @sveltejs/mcp svelte-autofixer` on components you change.
-- The Herdr mod: `herdr-app check mod/herdr-share` must pass; try it in a Herdr window started with
+- The Herdr mod (`herdr/herdr-share/mods/herdr-share`, also the herdr.dev listing): `herdr-app
+  check` on an installed copy must pass (checking the source folder writes type files into it); try it in a Herdr window started with
   its own `HERDR_APP_HOME`, and remember `herdr-share mod install` installs the copy embedded in the
   binary (rebuild first).
 - Keep `docs/` in step with behaviour, protocol and configuration changes.

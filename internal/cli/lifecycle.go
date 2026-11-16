@@ -12,11 +12,11 @@ import (
 
 	"github.com/spf13/cobra"
 
+	mod "github.com/jtsang4/herdr-share/herdr"
 	"github.com/jtsang4/herdr-share/internal/config"
 	"github.com/jtsang4/herdr-share/internal/control"
 	"github.com/jtsang4/herdr-share/internal/store"
 	"github.com/jtsang4/herdr-share/internal/version"
-	"github.com/jtsang4/herdr-share/mod"
 )
 
 // semver parses "1.2.3" (a leading v and a pre-release suffix allowed).
