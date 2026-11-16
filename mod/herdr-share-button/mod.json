@@ -1,0 +1,11 @@
+{
+  "place": "none",
+  "title": "Share button",
+  "overlay": {
+    "kind": "window",
+    "key": "herdr-share-button",
+    "keep": true,
+    "frame": "none",
+    "at": { "x": 560, "y": 7 }
+  }
+}

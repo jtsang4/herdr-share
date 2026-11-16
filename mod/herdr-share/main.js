@@ -12,7 +12,9 @@
 
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
-import { exec, readTextFile, appHome, theme, props, closeOverlay, focused, panes, spaces, notify, checking } from "herdr";
+import { exec, readTextFile, appHome, theme, props, closeOverlay, focused, panes, spaces, notify, checking, run, shared, setShared } from "herdr";
+
+const BUTTON = "herdr-share.button";
 
 const MODES = [
   { id: "view", label: "View only", hint: "Viewers watch. Nobody else can type." },
@@ -82,6 +84,9 @@ export default class HerdrShare extends View {
       this.loading = false;
       return;
     }
+    // Bring back the floating Share button unless it was hidden on purpose.
+    const button = shared(BUTTON);
+    if (button !== "shown" && button !== "hidden") run("mod.open", { name: "herdr-share-button" });
     cx.spawn(async (cx) => {
       await this.locate();
       await this.reload();
@@ -510,6 +515,23 @@ export default class HerdrShare extends View {
         el.child(
           h_flex()
             .justify_end()
+            .gap(14)
+            .when(shared(BUTTON) === "hidden", (row) =>
+              row.child(
+                div()
+                  .id("hs-show-button")
+                  .text_size(11.5)
+                  .text_color(t.dim)
+                  .cursor_pointer()
+                  .hover((s) => s.text_color(t.foreground))
+                  .on_click((_e, cx) => {
+                    setShared(BUTTON, null);
+                    run("mod.open", { name: "herdr-share-button" });
+                    cx.notify();
+                  })
+                  .child("Show the Share button"),
+              ),
+            )
             .child(
               div()
                 .id("hs-open-settings")

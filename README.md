@@ -16,6 +16,10 @@ them off at once and the link never works again. Your session keeps running eith
 - **Never resizes your view.** Viewers see your terminal at your size; their typing does not
   change it.
 
+| In Herdr: the Share button and dialog | In the viewer's browser |
+|---|---|
+| ![The Share button in Herdr's tab bar, showing an active share](docs/images/share-button.png) ![The Share dialog](docs/images/share-dialog.png) | ![A viewer typing into a shared terminal](docs/images/viewer.png) |
+
 ## How it works
 
 ```
@@ -53,12 +57,12 @@ download the zip from [Releases](https://github.com/jtsang4/herdr-share/releases
 curl -fsSL https://raw.githubusercontent.com/jtsang4/herdr-share/main/scripts/install.sh | sh
 ```
 
-This installs `herdr-share` into `~/.local/bin`, adds the Share dialog to Herdr and binds
-**⌘⇧S** (Ctrl+Shift+S on Linux/Windows) to open it. `HERDR_SHARE_NO_BIND=1` leaves your
-`keys.json` alone.
+This installs `herdr-share` into `~/.local/bin`, adds a floating **Share** button and the Share
+dialog to Herdr, and binds **⌘⇧S** (Ctrl+Shift+S on Linux/Windows) to open the dialog.
+`HERDR_SHARE_NO_BIND=1` leaves your `keys.json` alone.
 
-**3. Share.** Focus the terminal in Herdr and press **⌘⇧S**. The first time, enter your relay's
-address (and token). Then pick who can type and how long the link works, and click
+**3. Share.** Focus the terminal in Herdr and click the **Share** button (or press **⌘⇧S**). The
+first time, enter your relay's address (and token). Then pick who can type and how long the link works, and click
 **Start sharing** — the link is copied. Send it to whoever should watch.
 
 The same from a terminal:

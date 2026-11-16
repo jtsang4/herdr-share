@@ -102,13 +102,15 @@ func TestBindingWithoutKeysFileOrGlobalSection(t *testing.T) {
 }
 
 func TestInstallModFiles(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "mods", "herdr-share")
-	if err := installModFiles(dir); err != nil {
-		t.Fatal(err)
-	}
-	for _, f := range []string{"main.js", "mod.json"} {
-		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
-			t.Fatalf("%s not installed", f)
+	for _, name := range []string{"herdr-share", "herdr-share-button"} {
+		dir := filepath.Join(t.TempDir(), "mods", name)
+		if err := installModFiles(name, dir); err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range []string{"main.js", "mod.json"} {
+			if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
+				t.Fatalf("%s/%s not installed", name, f)
+			}
 		}
 	}
 }
