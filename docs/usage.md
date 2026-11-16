@@ -33,11 +33,11 @@ This guide walks through sharing from both sides: **you**, sharing a session fro
 
 ### From Herdr
 
-1. Focus the terminal you want to share and click the floating **Share** button (by default in
-   the tab bar; drag it by its left edge, Herdr remembers where) — or press **⌘⇧S**
-   (Ctrl+Shift+S on Linux and Windows). The **Share session** dialog opens for that terminal.
-   The button turns into **Sharing · N watching** while the focused terminal is shared; its ×
-   hides it, and the dialog's *Show the Share button* brings it back.
+1. Focus the terminal you want to share and press **⌘⇧S** (Ctrl+Shift+S on Linux and Windows).
+   The **Share session** dialog opens for that terminal. The shortcut is the only thing
+   herdr-share adds to Herdr: no buttons, no layout changes. It is listed in Herdr's Keys screen
+   (⌘/) as *mod open herdr-share*. Without the key binding, open the dialog with
+   `herdr-app do mod.open --name herdr-share`.
 2. Choose:
    - **Who can type** — *View only* or *Can type*. Choosing *Can type* shows a reminder that viewers
      will be able to run commands as you.
@@ -109,6 +109,5 @@ The page is in English, or Simplified Chinese when the browser prefers Chinese.
 | “this relay requires a token” | `herdr-share config set token …` |
 | “does not look like a herdr-share relay” | the relay URL, or a proxy in front answering instead |
 | Viewer sees “This link does not work” | the link was cut off; it must include everything after `#` |
-| No Share button | Open the dialog with ⌘⇧S and click *Show the Share button*, or run `herdr-share mod install` while Herdr is open |
 | ⌘⇧S does nothing | `herdr-share mod install` again; it reports if the key was taken |
 | Anything else | `herdr-share doctor`, then the bridge log path from `herdr-share status <share> --json` |

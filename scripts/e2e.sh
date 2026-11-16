@@ -106,7 +106,6 @@ say "Herdr mod"
 json 'v.bin' <"$HERDR_APP_HOME/mods/herdr-share/install.json" | grep -q "herdr-share$" || fail "install.json has no binary"
 if command -v herdr-app >/dev/null; then
 	herdr-app check "$HERDR_APP_HOME/mods/herdr-share" || fail "herdr-app check failed"
-	herdr-app check "$HERDR_APP_HOME/mods/herdr-share-button" || fail "herdr-app check failed for the button"
 fi
 "$SHARE" doctor || fail "doctor reports a problem"
 
@@ -147,6 +146,6 @@ say "stop --all and mod uninstall"
 "$SHARE" stop --all >/dev/null
 [ "$("$SHARE" list --json | json 'v.length')" = 0 ] || fail "stop --all left shares"
 "$SHARE" mod uninstall >/dev/null
-[ ! -e "$HERDR_APP_HOME/mods/herdr-share" ] && [ ! -e "$HERDR_APP_HOME/mods/herdr-share-button" ] || fail "mods not removed"
+[ ! -e "$HERDR_APP_HOME/mods/herdr-share" ] || fail "mod not removed"
 
 say "e2e passed"

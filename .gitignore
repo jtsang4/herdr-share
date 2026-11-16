@@ -24,3 +24,8 @@ node_modules/
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
+
+# Written by `herdr-app check` into the mod folder it checks
+/mod/**/gpui-kit.d.ts
+/mod/**/herdr.d.ts
+/mod/**/jsconfig.json

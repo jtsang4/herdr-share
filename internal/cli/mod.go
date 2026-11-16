@@ -2,17 +2,14 @@ package cli
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -81,10 +78,8 @@ yours and stops adding new default shortcuts to it on upgrades; use
 				}
 			}
 			dir := filepath.Join(home, "mods", mod.Name)
-			for _, name := range mod.Names {
-				if err := installModFiles(name, filepath.Join(home, "mods", name)); err != nil {
-					return err
-				}
+			if err := installModFiles(dir); err != nil {
+				return err
 			}
 			exe, err := os.Executable()
 			if err != nil {
@@ -112,12 +107,6 @@ yours and stops adding new default shortcuts to it on upgrades; use
 				result["key"] = key
 				result["bound"] = bound
 				msg = append(msg, note)
-			}
-			result["button"] = showButton(home)
-			if result["button"] == true {
-				msg = append(msg, "The Share button is now in your Herdr window; drag it by its left edge.")
-			} else {
-				msg = append(msg, "Herdr is not running: the Share button appears the first time you open the Share dialog.")
 			}
 			if a.asJSON {
 				return a.printJSON(result)
@@ -148,11 +137,8 @@ yours and stops adding new default shortcuts to it on upgrades; use
 				}
 			}
 			dir := filepath.Join(home, "mods", mod.Name)
-			hideButton(home)
-			for _, name := range mod.Names {
-				if err := os.RemoveAll(filepath.Join(home, "mods", name)); err != nil {
-					return err
-				}
+			if err := os.RemoveAll(dir); err != nil {
+				return err
 			}
 			removed, err := removeBinding(filepath.Join(home, "keys.json"))
 			if err != nil {
@@ -191,17 +177,24 @@ yours and stops adding new default shortcuts to it on upgrades; use
 	return c
 }
 
-func installModFiles(name, dir string) error {
+// generatedByHerdr are files `herdr-app check` writes into a mod folder;
+// Herdr writes its own copies into installed mods.
+var generatedByHerdr = map[string]bool{"gpui-kit.d.ts": true, "herdr.d.ts": true, "jsconfig.json": true}
+
+func installModFiles(dir string) error {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
-	src, err := fs.Sub(mod.Files, name)
+	src, err := fs.Sub(mod.Files, mod.Name)
 	if err != nil {
 		return err
 	}
 	return fs.WalkDir(src, ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if generatedByHerdr[d.Name()] {
+			return nil
 		}
 		target := filepath.Join(dir, filepath.FromSlash(p))
 		if d.IsDir() {
@@ -231,10 +224,10 @@ func addBinding(path, key string) (bool, string, error) {
 	if err := json.Unmarshal(b, &parsed); err != nil {
 		return false, "", fmt.Errorf("%s is not valid JSON: %w", path, err)
 	}
-	for section, keys := range parsed {
+	for _, keys := range parsed {
 		for k, v := range keys {
 			if s, ok := v.(string); ok && s == bindAction {
-				return true, fmt.Sprintf("%s already opens the Share dialog (%s).", k, section), nil
+				return true, fmt.Sprintf("%s opens the Share dialog: focus a terminal in Herdr and press it.", k), nil
 			}
 		}
 	}
@@ -274,7 +267,7 @@ func addBinding(path, key string) (bool, string, error) {
 	if err := config.WriteFileAtomic(path, out, 0o644); err != nil {
 		return false, "", err
 	}
-	return true, fmt.Sprintf("Bound %s to open the Share dialog (previous keys.json saved as keys.json.herdr-share-backup).", key), nil
+	return true, fmt.Sprintf("Bound %s: focus a terminal in Herdr and press it to open the Share dialog (previous keys.json saved as keys.json.herdr-share-backup).", key), nil
 }
 
 var bindingLine = regexp.MustCompile(`(?m)^[ \t]*"[^"\n]*"\s*:\s*"` + regexp.QuoteMeta(bindAction) + `"\s*,?[ \t]*\r?\n`)
@@ -299,64 +292,4 @@ func removeBinding(path string) (bool, error) {
 		return false, fmt.Errorf("could not edit %s safely; remove the %q binding by hand", path, bindAction)
 	}
 	return true, config.WriteFileAtomic(path, out, 0o644)
-}
-
-// herdrApp runs herdr-app against the window that owns home, if one runs.
-func herdrApp(home string, args ...string) ([]byte, error) {
-	bin, err := exec.LookPath("herdr-app")
-	if err != nil {
-		return nil, err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, bin, args...) //nolint:gosec // the user's own herdr-app
-	cmd.Env = append(os.Environ(), "HERDR_APP_HOME="+home)
-	return cmd.Output()
-}
-
-// buttonShown reports whether the running window shows the Share button,
-// and the overlay id it has (its window key, or mod-<name> on older apps).
-func buttonShown(home string) (id string, running bool) {
-	out, err := herdrApp(home, "status")
-	if err != nil {
-		return "", false
-	}
-	var st struct {
-		Overlays []string `json:"overlays"`
-	}
-	if json.Unmarshal(out, &st) != nil {
-		return "", false
-	}
-	for _, o := range st.Overlays {
-		if o == mod.Button || o == "mod-"+mod.Button {
-			return o, true
-		}
-	}
-	return "", true
-}
-
-// showButton opens the floating Share button in a running Herdr window.
-func showButton(home string) bool {
-	id, running := buttonShown(home)
-	if id != "" {
-		return true
-	}
-	if !running {
-		return false
-	}
-	// The mod folder was just written; give Herdr a moment to notice it.
-	for range 20 {
-		if _, err := herdrApp(home, "do", "mod.open", "--name", mod.Button); err == nil {
-			return true
-		}
-		time.Sleep(250 * time.Millisecond)
-	}
-	return false
-}
-
-// hideButton closes the floating Share button if a running window shows it.
-func hideButton(home string) {
-	if id, _ := buttonShown(home); id != "" {
-		_, _ = herdrApp(home, "do", "overlay.close", "--id", id)
-	}
 }

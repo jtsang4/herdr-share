@@ -28,9 +28,11 @@ docker run -d --name herdr-share-relay -p 8080:8080 \
 curl -fsSL https://raw.githubusercontent.com/jtsang4/herdr-share/main/scripts/install.sh | sh
 ```
 
-这会把 `herdr-share` 装到 `~/.local/bin`，在 Herdr 窗口里加一个悬浮的 **Share** 按钮和分享对话框，并绑定 **⌘⇧S**（Linux/Windows 为 Ctrl+Shift+S）打开对话框。设置 `HERDR_SHARE_NO_BIND=1` 则不改动你的 `keys.json`。
+这会把 `herdr-share` 装到 `~/.local/bin`，在 Herdr 里加入分享对话框，并绑定 **⌘⇧S**（Linux/Windows 为 Ctrl+Shift+S）来打开它。除了这个对话框，不会往窗口里加任何东西，也不改你的布局。设置 `HERDR_SHARE_NO_BIND=1` 则不改动你的 `keys.json`。
 
-**3. 分享**：在 Herdr 里聚焦要分享的终端，点 **Share** 按钮（或按 **⌘⇧S**）。第一次会让你填中继地址（和 token）；之后选择“谁能操作”和“链接有效期”，点 **Start sharing**，链接自动复制，发给对方即可。
+![Herdr 里的分享对话框](docs/images/share-dialog.png)
+
+**3. 分享**：在 Herdr 里聚焦要分享的终端，按 **⌘⇧S**。第一次会让你填中继地址（和 token）；之后选择“谁能操作”和“链接有效期”，点 **Start sharing**，链接自动复制，发给对方即可。
 
 命令行同样可以：
 

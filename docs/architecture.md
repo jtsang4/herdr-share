@@ -5,7 +5,6 @@ herdr-share has four parts:
 | Part | Where | Code |
 |---|---|---|
 | **Share dialog** (Herdr mod) | the sharer's Herdr window | `mod/herdr-share/` |
-| **Share button** (Herdr mod) | a kept floating window over Herdr | `mod/herdr-share-button/` |
 | **CLI and bridge** (`herdr-share`) | the sharer's machine | `cmd/herdr-share`, `internal/{cli,bridge,hcclient,control,store,config}` |
 | **Relay** (`herdr-share-relay`) | a server you deploy | `cmd/herdr-share-relay`, `internal/relay` |
 | **Viewer page** | the viewer's browser, served by the relay | `web/` (SvelteKit, embedded by `web/embed.go`) |
