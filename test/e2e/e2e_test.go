@@ -447,6 +447,7 @@ func TestRelayRequiresToken(t *testing.T) {
 
 // cutProxy forwards TCP connections and can drop them all at once.
 type cutProxy struct {
+	ln     net.Listener
 	addr   string
 	mu     sync.Mutex
 	conns  []net.Conn
@@ -459,7 +460,7 @@ func newCutProxy(t *testing.T, target string) *cutProxy {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = ln.Close() })
-	p := &cutProxy{addr: ln.Addr().String(), target: target}
+	p := &cutProxy{ln: ln, addr: ln.Addr().String(), target: target}
 	go func() {
 		for {
 			c, err := ln.Accept()
@@ -489,3 +490,29 @@ func (p *cutProxy) cut() {
 	}
 	p.conns = nil
 }
+
+func TestShareEndsWhenRelayStaysUnreachable(t *testing.T) {
+	hc := needCore(t)
+	term := echoTerminal(t, hc)
+	env := startRelay(t, relay.Config{})
+	b, done := startBridge(t, bridge.Options{Terminal: term.Address, RelayURL: env.url, TTL: time.Hour, RelayGiveUp: 2 * time.Second})
+	_ = b
+	// Take the relay away for good: the proxy refuses new connections.
+	env.proxy.close()
+	env.proxy.cut()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+		done <- nil
+	case <-time.After(20 * time.Second):
+		t.Fatal("bridge kept waiting for a relay that is gone")
+	}
+	if s := b.Snapshot(); s.EndReason != bridge.EndRelayLost {
+		t.Fatalf("end reason %q", s.EndReason)
+	}
+}
+
+// close stops accepting connections.
+func (p *cutProxy) close() { _ = p.ln.Close() }

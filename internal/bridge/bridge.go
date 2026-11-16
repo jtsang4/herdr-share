@@ -55,6 +55,16 @@ type Options struct {
 	Logger  *slog.Logger
 	// OnChange is called after every state change, from any goroutine.
 	OnChange func(State)
+	// RelayGiveUp is how long the bridge keeps trying to reach a relay that
+	// went away before it ends the share (default 10 minutes).
+	RelayGiveUp time.Duration
+}
+
+func (o Options) relayGiveUp() time.Duration {
+	if o.RelayGiveUp > 0 {
+		return o.RelayGiveUp
+	}
+	return 10 * time.Minute
 }
 
 // Guest describes a connected guest.

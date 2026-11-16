@@ -157,7 +157,15 @@ func (b *Bridge) relayLoop(ctx context.Context, rc *relayConn, end func(string))
 		b.mu.Unlock()
 		b.dropGuests()
 		b.changed()
+		giveUp := time.Now().Add(b.opts.relayGiveUp())
 		for delay := 500 * time.Millisecond; ; delay = min(delay*2, 10*time.Second) {
+			if time.Now().After(giveUp) {
+				// Nobody can reach the share while the relay is gone; do not
+				// leave a bridge waiting for it forever.
+				b.log.Error("relay unreachable for too long; ending the share")
+				end(EndRelayLost)
+				return
+			}
 			select {
 			case <-ctx.Done():
 				return
