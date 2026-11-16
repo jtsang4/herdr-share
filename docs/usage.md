@@ -15,26 +15,34 @@ This guide walks through sharing from both sides: **you**, sharing a session fro
 
 ## Setting up (once)
 
-1. Someone deploys a relay ([deploy.md](deploy.md)) and gives you its address and, if it uses one,
-   a token.
-2. Add the Share dialog to Herdr (Node.js 22+; nothing to install globally):
-   ```sh
-   npx -y herdr-share@latest mod install
-   ```
-   In the rest of this guide, `herdr-share` stands for `npx --prefer-offline -y herdr-share` (cached,
-   no registry check after the first run), or the command itself if you installed it with
-   `npm i -g herdr-share` or the install script.
-3. Tell herdr-share where the relay is. Either open the Share dialog (below) — it asks the first
-   time — or:
-   ```sh
-   herdr-share config set relay https://share.example.com
-   herdr-share config set token <token>   # only if the relay requires one
-   herdr-share doctor                     # checks relay, herdr-core and the mod
-   ```
+Someone deploys a relay ([deploy.md](deploy.md)) and gives you its address, plus a token if it uses
+one. That is all you need: the first time you share, tell the agent (or the dialog, or
+`herdr-share config set relay …`) the address; it is remembered.
+
+Optional: `npx -y herdr-share@latest mod install` adds the Share dialog to Herdr (⌘⇧S), and
+`herdr-share doctor` checks the relay, herdr-core and the dialog.
 
 ## Sharing (you)
 
+### From your coding agent (the simplest way)
+
+No install. In the agent's session in Herdr, say:
+
+> Use `npx skills use jtsang4/herdr-share --skill herdr-share` to share this session. Viewers can
+> type, for 24 hours. Relay: https://share.example.com
+
+`npx skills use` hands the agent the herdr-share skill for this request; the agent runs herdr-share
+through npx, shares its own terminal (`$HC_TERMINAL_ID`) and replies with the full link, when it
+ends and how to stop it. Name the relay the first time only. In the same conversation you can go on:
+“let them type”, “view only again”, “who is watching?”, “give it another hour”, “stop sharing”. In a
+new conversation, start with the same `npx skills use …` sentence.
+
+To keep the skill around instead, install it once: `npx skills add jtsang4/herdr-share --skill
+herdr-share`.
+
 ### From Herdr
+
+After `npx -y herdr-share@latest mod install` (once):
 
 1. Focus the terminal you want to share and press **⌘⇧S** (Ctrl+Shift+S on Linux and Windows).
    The **Share session** dialog opens for that terminal. The shortcut is the only thing
@@ -62,6 +70,8 @@ Closing the dialog changes nothing: the share keeps running in the background.
 
 ### From a terminal
 
+`herdr-share` is `npx --prefer-offline -y herdr-share` (or the command, if installed globally):
+
 ```sh
 herdr-share start t7 --mode view --ttl 2h --copy --label "voltdance · review"
 herdr-share list
@@ -83,12 +93,40 @@ named terminal can be given by name). Defaults for `--mode` and `--ttl` come fro
   offline…” and continue where they were once it is back. If the relay restarts, its shares are
   gone: start sharing again and send the new link.
 
-### From your coding agent
+## Commands
 
-Install the skill once: `npx skills add jtsang4/herdr-share --skill herdr-share`. Then ask in plain
-words — “share this session view-only for 30 minutes”, “let them type”, “who is watching?”, “stop
-sharing”. The agent shares its own terminal (`$HC_TERMINAL_ID`) or the one you name, hands you the
-link, and asks before allowing typing.
+`herdr-share` below is `npx --prefer-offline -y herdr-share`, or the command itself after a global
+install. Every command takes `--json`.
+
+| Command | What it does |
+|---|---|
+| `herdr-share start <terminal>` | Share a terminal; prints (or `--copy`s) the link. `--mode view\|control`, `--ttl 30m\|2h\|7d\|0`, `--label` |
+| `herdr-share list` | Running shares |
+| `herdr-share status <share>` | Link, mode, viewers, expiry |
+| `herdr-share link <share> [--copy]` | Print or copy the link |
+| `herdr-share mode <share> view\|control` | Change whether viewers can type |
+| `herdr-share extend <share> <lifetime>` | New lifetime counted from now |
+| `herdr-share stop <share>\|--all` | End shares |
+| `herdr-share config set\|get\|show\|unset` | Relay URL, token, defaults |
+| `herdr-share mod install\|uninstall` | The Herdr Share dialog and its key |
+| `herdr-share doctor` | Check relay, herdr-core and mod |
+| `herdr-share uninstall` | Stop shares, remove the mod and settings |
+
+`<share>` is the share's id, or the terminal it shares (`t7`, `machine/t7`, or a terminal name).
+
+## Installing (optional)
+
+You don't need to install anything: npx runs herdr-share from its cache, downloading the native
+binary once per version and verifying its checksum; `--prefer-offline` skips the registry check after
+the first run. If you prefer a command on your PATH:
+
+| | Global npm install | Install script |
+|---|---|---|
+| Install | `npm i -g herdr-share` | `curl -fsSL https://raw.githubusercontent.com/jtsang4/herdr-share/main/scripts/install.sh \| sh` (to `~/.local/bin`) |
+| Update | `npm i -g herdr-share@latest` | run the script again |
+| Remove | `herdr-share uninstall && npm uninstall -g herdr-share` | `herdr-share uninstall`, then delete `~/.local/bin/herdr-share` |
+
+On Windows, use npx or the zip from [Releases](https://github.com/jtsang4/herdr-share/releases).
 
 ## Updating and uninstalling
 

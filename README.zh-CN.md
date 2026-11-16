@@ -10,61 +10,30 @@
 - **端到端加密**：密钥只在链接的 `#` 片段里，浏览器从不把它发给服务器。中继只转发它读不了、改不了、也无法重放的密文。
 - **不改变你的终端尺寸**：对方看到的是你的终端尺寸，对方打字也不会改变它。
 
-## 快速开始
+## 开始使用
 
-**1. 部署中继**（一次即可，个人或团队共用），详见 [docs/deploy.md](docs/deploy.md)：
-
-```sh
-docker run -d --name herdr-share-relay -p 8080:8080 \
-  -e HERDR_SHARE_TOKENS=$(openssl rand -hex 16) \
-  ghcr.io/jtsang4/herdr-share-relay:latest
-```
-
-公网使用请放在 HTTPS 后面（仓库里有带 Caddy 的 [compose 文件](deploy/docker-compose.yml)）。
-
-**2. 在分享者的机器上把分享对话框装进 Herdr**（macOS / Linux / Windows，需要 Node.js 22 及以上）：
+**1. 启动一个中继**（一次即可，个人或团队共用）：
 
 ```sh
-npx -y herdr-share@latest mod install
+docker run -d --name herdr-share-relay -p 8080:8080 ghcr.io/jtsang4/herdr-share-relay:latest
 ```
 
-不会全局安装任何东西：npx 拉取 npm 包，由它从 release 下载对应平台的原生二进制并校验 SHA-256，二进制就放在包里（npx 的缓存中）。这一步在 Herdr 里加入分享对话框，并绑定 **⌘⇧S**（Linux/Windows 为 Ctrl+Shift+S）打开它，不改你的布局；加 `--no-bind` 则不改动 `keys.json`。
+内网用这样就够了。放到公网时，请加上 HTTPS 和 token（`-e HERDR_SHARE_TOKENS=…`），见 [docs/deploy.md](docs/deploy.md)。
+
+**2. 在 Herdr 里对 coding agent 说一句话**，什么都不用装：
+
+> 用 `npx skills use jtsang4/herdr-share --skill herdr-share` 分享这个会话，对方可以操作，有效期 24 小时。中继地址是 http://your-relay:8080
+
+agent 会把它所在的会话分享出去，并回复链接，发给对方就行。中继地址只需第一次说，之后会记住。不想分享了就说“停止分享”，对方立刻断开，链接永久失效。去掉“对方可以操作”就是只读分享。
 
 ![Herdr 里的分享对话框](docs/images/share-dialog.png)
 
-**3. 分享**：在 Herdr 里聚焦要分享的终端，按 **⌘⇧S**。第一次会让你填中继地址（和 token）；之后选择“谁能操作”和“链接有效期”，点 **Start sharing**，链接自动复制，发给对方即可。
+## 其他分享方式
 
-命令行同样可以（下面的 `herdr-share` 指 `npx --prefer-offline -y herdr-share`；全局安装过则直接用命令）：
+- **Herdr 里的快捷键**：`npx -y herdr-share@latest mod install` 会在 Herdr 里加一个分享对话框，在聚焦的终端上按 **⌘⇧S**（Linux/Windows 为 Ctrl+Shift+S）打开。
+- **命令行**：`npx --prefer-offline -y herdr-share start t7 --mode control --ttl 24h`（`t7` 是终端地址，见 `hc ls`），用 `… stop t7` 停止。
 
-```sh
-herdr-share config set relay https://share.example.com
-herdr-share config set token <token>
-herdr-share start t7 --mode view --ttl 2h --copy   # t7 是终端地址（见 `hc ls`）
-herdr-share mode t7 control                        # 允许对方操作
-herdr-share stop t7                                # 链接立即失效
-```
-
-**也可以直接让 coding agent 来做**：装一次 skill，然后说“把当前会话只读分享给 Alice，30 分钟”即可：
-
-```sh
-npx skills add jtsang4/herdr-share --skill herdr-share
-```
-
-分享者和被分享者的完整使用流程见 [docs/usage.md](docs/usage.md)。
-
-## 安装、更新与卸载
-
-| | npx（推荐） | npm 全局安装 | 安装脚本 / 手动 |
-|---|---|---|---|
-| 安装 | `npx -y herdr-share@latest mod install` | `npm i -g herdr-share && herdr-share mod install` | `curl -fsSL https://raw.githubusercontent.com/jtsang4/herdr-share/main/scripts/install.sh \| sh` |
-| 日常使用 | `npx --prefer-offline -y herdr-share …` | `herdr-share …` | `herdr-share …` |
-| 更新 | `npx -y herdr-share@latest version` | `npm i -g herdr-share@latest` | 重新运行安装脚本 |
-| 卸载 | `npx -y herdr-share uninstall` | `herdr-share uninstall && npm uninstall -g herdr-share` | `herdr-share uninstall`，再删掉 `~/.local/bin/herdr-share` |
-
-- **默认就是 npx 模式**：不往 PATH 里放任何东西，Herdr 里的 mod 通过 `npx -y herdr-share@<版本>` 调用（走 npx 缓存）。如果选择全局安装，`herdr-share` 命令放在 npm 正常的全局 bin 目录，二进制随包放在全局 `node_modules` 里。
-- **不会反复下载，也不会每次查版本**：同一版本的二进制只下载一次；`--prefer-offline` 让 npx 直接用缓存、不去问 registry，首次之后每条命令都能离线运行，体验和全局命令一样。只有带 `@latest` 时才检查新版本。
-- **更新**（需要时执行一次 `@latest`）只下载一次新版本，并自动刷新 Herdr 里的 mod；正在进行的分享继续用旧二进制直到结束。
-- **`herdr-share uninstall`** 会停止所有分享、移除 Herdr mod 和快捷键、删除配置与状态（加 `--keep-config` 保留配置）。
+全部命令、更新和卸载方法见 [docs/usage.md](docs/usage.md)。
 
 ## 安全
 
