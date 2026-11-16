@@ -7,13 +7,16 @@ import (
 )
 
 func TestParseTTL(t *testing.T) {
-	for in, want := range map[string]time.Duration{
-		"30m": 30 * time.Minute, "2h": 2 * time.Hour, "90": 90 * time.Minute,
-		"0": 0, "never": 0, "until-stopped": 0, " 1h30m ": 90 * time.Minute,
+	for _, c := range []struct {
+		in   string
+		want time.Duration
+	}{
+		{"30m", 30 * time.Minute}, {"2h", 2 * time.Hour}, {"90", 90 * time.Minute},
+		{"0", 0}, {"never", 0}, {"until-stopped", 0}, {" 1h30m ", 90 * time.Minute},
 	} {
-		got, err := ParseTTL(in)
-		if err != nil || got != want {
-			t.Errorf("ParseTTL(%q) = %v, %v; want %v", in, got, err, want)
+		got, err := ParseTTL(c.in)
+		if err != nil || got != c.want {
+			t.Errorf("ParseTTL(%q) = %v, %v; want %v", c.in, got, err, c.want)
 		}
 	}
 	for _, bad := range []string{"", "soon", "10s", "-5m"} {

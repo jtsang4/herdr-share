@@ -304,8 +304,9 @@ func TestGuestOriginIsChecked(t *testing.T) {
 
 func TestLimiter(t *testing.T) {
 	l := newLimiter(2, time.Minute)
-	if !l.allow("a") || !l.allow("a") || l.allow("a") {
-		t.Fatal("limit not applied")
+	got := []bool{l.allow("a"), l.allow("a"), l.allow("a")}
+	if !got[0] || !got[1] || got[2] {
+		t.Fatalf("limit not applied: %v", got)
 	}
 	if !l.allow("b") {
 		t.Fatal("keys are independent")
