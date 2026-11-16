@@ -49,6 +49,12 @@ archives:
     files:
       - LICENSE
       - README.md
+  # Raw CLI binaries, downloaded by the npm launcher (build/npm/lib/launcher.js
+  # expects exactly this naming: herdr-share_<version>_<os>_<arch>[.exe]).
+  - id: herdr-share-binary
+    ids: [herdr-share]
+    formats: [binary]
+    name_template: "herdr-share_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
   # The relay, for running without a container.
   - id: herdr-share-relay
     ids: [herdr-share-relay]

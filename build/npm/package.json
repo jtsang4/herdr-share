@@ -1,0 +1,44 @@
+{
+  "name": "herdr-share",
+  "version": "0.0.0-development",
+  "description": "Share a live Herdr terminal session through your own relay: browser viewers, view-only or can-type, end-to-end encrypted.",
+  "keywords": [
+    "herdr",
+    "terminal",
+    "terminal-sharing",
+    "pair-programming",
+    "coding-agents",
+    "end-to-end-encryption",
+    "cli"
+  ],
+  "homepage": "https://github.com/jtsang4/herdr-share#readme",
+  "bugs": {
+    "url": "https://github.com/jtsang4/herdr-share/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jtsang4/herdr-share.git",
+    "directory": "build/npm"
+  },
+  "license": "MIT",
+  "author": "jtsang4",
+  "type": "module",
+  "bin": {
+    "herdr-share": "bin/herdr-share.js"
+  },
+  "files": [
+    "bin",
+    "lib"
+  ],
+  "scripts": {
+    "postinstall": "node lib/postinstall.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

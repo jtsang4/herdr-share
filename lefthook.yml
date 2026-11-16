@@ -18,6 +18,11 @@ pre-commit:
       glob: "*.{ts,js,svelte,css,json}"
       run: ./node_modules/.bin/oxfmt --check {staged_files} && ./node_modules/.bin/oxlint --deny-warnings {staged_files}
 
+    - name: npm launcher syntax
+      root: "build/npm/"
+      glob: "*.js"
+      run: node --check {staged_files}
+
     - name: mod syntax
       root: "mod/herdr-share/"
       glob: "*.js"

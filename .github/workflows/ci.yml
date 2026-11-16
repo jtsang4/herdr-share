@@ -31,6 +31,7 @@ jobs:
       go: ${{ steps.filter.outputs.go }}
       web: ${{ steps.filter.outputs.web }}
       e2e: ${{ steps.filter.outputs.e2e }}
+      npm: ${{ steps.filter.outputs.npm }}
       image: ${{ steps.filter.outputs.image }}
     steps:
       - uses: actions/checkout@v7
@@ -60,6 +61,9 @@ jobs:
               - "mod/**"
               - "scripts/**"
               - "test/**"
+            npm:
+              - *shared
+              - "build/npm/**"
             image:
               - *shared
               - "**.go"
@@ -132,6 +136,19 @@ jobs:
       - run: pnpm run check
       - run: pnpm run test
       - run: pnpm run build
+
+  npm-launcher:
+    name: npm launcher
+    needs: changes
+    if: needs.changes.outputs.npm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - run: node --test
+        working-directory: build/npm
 
   e2e:
     name: End to end

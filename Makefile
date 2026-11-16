@@ -35,6 +35,7 @@ build: ## Build herdr-share and herdr-share-relay into ./bin (run `make web` fir
 test: ## Run Go unit tests and web checks and tests
 	go test ./...
 	cd web && $(PNPM) run check && $(PNPM) run test
+	cd build/npm && node --test
 
 .PHONY: e2e
 e2e: build ## Run end-to-end tests against an isolated herdr-core, relay and browser
