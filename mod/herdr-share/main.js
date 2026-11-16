@@ -63,6 +63,7 @@ export default class HerdrShare extends View {
     this.handle = cx.focus_handle();
     this.handle.focus();
     this.bin = "herdr-share";
+    this.binArgs = [];
     this.home = "";
     this.loading = true;
     this.busy = null; // what is running: "start", "mode", "stop", ...
@@ -109,15 +110,16 @@ export default class HerdrShare extends View {
     const text = await readTextFile(`${appHome()}/mods/herdr-share/install.json`).catch(() => null);
     const info = text ? parseJSON(text) : null;
     if (info?.bin) this.bin = info.bin;
+    if (Array.isArray(info?.args)) this.binArgs = info.args;
     if (info?.home) this.home = info.home;
   }
 
   run(args, timeout = 30000) {
     const full = this.home ? ["--home", this.home, ...args] : args;
-    return exec(this.bin, [...full, "--json"], { timeout }).catch((e) => ({
+    return exec(this.bin, [...this.binArgs, ...full, "--json"], { timeout }).catch((e) => ({
       code: 127,
       stdout: "",
-      stderr: `Cannot run ${this.bin}: ${e}. Install herdr-share and run \`herdr-share mod install\`.`,
+      stderr: `Cannot run ${this.bin}: ${e}. Run \`npx -y herdr-share@latest mod install\` again.`,
     }));
   }
 

@@ -62,13 +62,18 @@ changed at any time. Everything between you and them is end-to-end encrypted.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version.String(),
-		PersistentPreRunE: func(*cobra.Command, []string) error {
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			p, err := config.Resolve(a.home)
 			if err != nil {
 				return err
 			}
 			a.paths = p
 			a.cfg, a.loadErr = config.Load(p)
+			switch cmd.Name() {
+			case "serve", "version", "mod", "install", "uninstall":
+			default:
+				a.refreshMod()
+			}
 			return nil
 		},
 	}
@@ -90,6 +95,7 @@ changed at any time. Everything between you and them is end-to-end encrypted.`,
 		a.configCommand(),
 		a.modCommand(),
 		a.doctorCommand(),
+		a.uninstallCommand(),
 		a.versionCommand(),
 	)
 	return root
@@ -110,11 +116,16 @@ func (a *app) printJSON(v any) error {
 }
 
 func (a *app) versionCommand() *cobra.Command {
-	return &cobra.Command{
+	var short bool
+	c := &cobra.Command{
 		Use:   "version",
 		Short: "Print the version",
 		Args:  cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
+			if short {
+				fmt.Fprintln(a.stdout, version.Version)
+				return nil
+			}
 			if a.asJSON {
 				return a.printJSON(map[string]any{
 					"version": version.Version, "commit": version.Commit, "date": version.Date,
@@ -125,6 +136,8 @@ func (a *app) versionCommand() *cobra.Command {
 			return nil
 		},
 	}
+	c.Flags().BoolVar(&short, "short", false, "print only the version number")
+	return c
 }
 
 func humanUntil(t time.Time) string {

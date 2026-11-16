@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jtsang4/herdr-share/internal/config"
-	"github.com/jtsang4/herdr-share/internal/version"
 	"github.com/jtsang4/herdr-share/mod"
 )
 
@@ -37,9 +36,12 @@ func AppHome() (string, error) {
 // installInfo is written beside the mod so it can find this binary and
 // its settings, even when Herdr's PATH lacks it.
 type installInfo struct {
-	Bin     string `json:"bin"`
-	Home    string `json:"home,omitempty"`
-	Version string `json:"version"`
+	// Bin and Args are the command the mod runs: the binary itself, the
+	// global npm launcher, or `npx -y herdr-share@<version>`.
+	Bin     string   `json:"bin"`
+	Args    []string `json:"args,omitempty"`
+	Home    string   `json:"home,omitempty"`
+	Version string   `json:"version"`
 }
 
 func defaultBinding() string {
@@ -78,21 +80,10 @@ yours and stops adding new default shortcuts to it on upgrades; use
 				}
 			}
 			dir := filepath.Join(home, "mods", mod.Name)
-			if err := installModFiles(dir); err != nil {
+			if err := a.writeMod(home); err != nil {
 				return err
 			}
-			exe, err := os.Executable()
-			if err != nil {
-				return err
-			}
-			if r, err := filepath.EvalSymlinks(exe); err == nil {
-				exe = r
-			}
-			info := installInfo{Bin: exe, Home: a.paths.Home, Version: version.Version}
-			b, _ := json.MarshalIndent(info, "", "  ")
-			if err := config.WriteFileAtomic(filepath.Join(dir, "install.json"), append(b, '\n'), 0o644); err != nil {
-				return err
-			}
+			exe, _ := os.Executable()
 			result := map[string]any{"mod": dir, "bin": exe}
 			msg := []string{fmt.Sprintf("Installed the Herdr mod in %s.", dir)}
 			if !noBind {
