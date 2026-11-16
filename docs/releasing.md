@@ -51,9 +51,14 @@ first version is published by hand:
    npm publish --access public --provenance=false
    git checkout package.json
    ```
+   Run it in a real terminal: with web-based 2FA npm prints an authentication URL and waits; without
+   a TTY it exits instead. A new package first shows only a `0.0.0-stage` placeholder while npm
+   processes it ("may take a few minutes to become available").
 3. On npmjs.com, open `herdr-share` → **Settings → Trusted Publisher** → GitHub Actions:
    organization/user `jtsang4`, repository `herdr-share`, workflow `release.yml`, no environment,
-   and allow **npm publish**.
+   and tick **Allow npm publish** (without it only `npm stage publish` is allowed). The page asks
+   for the security key; after it, open the Settings URL again if npm lands on an unrelated page.
+   (`npm trust github` answered 400 for this package, so use the website.)
 4. A new trusted publisher must be used within **2 days**, or it expires; publish a patch soon after.
 5. Once automatic publishing works, require 2FA and disallow tokens in the package settings.
 

@@ -4,6 +4,11 @@ Release notes for each version are published on the
 [GitHub releases page](https://github.com/jtsang4/herdr-share/releases), generated from commit
 messages. Notable changes are summarized here.
 
+## 0.1.2 — 2026-11-17
+
+- First release published to npm by the release workflow through trusted publishing.
+- The Herdr mod is listed on herdr.dev (`herdr/herdr-share`).
+
 ## 0.1.1 — 2026-11-17
 
 - Install and run with npm: `npx -y herdr-share@latest mod install`. No global install needed;
