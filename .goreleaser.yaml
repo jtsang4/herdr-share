@@ -1,0 +1,132 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: herdr-share
+
+before:
+  hooks:
+    # The guest web client must be built before Go so that go:embed picks it up.
+    - sh -c 'test -f web/build/app/index.html || (echo "web client not built; run make web" >&2; exit 1)'
+
+builds:
+  - id: herdr-share
+    main: ./cmd/herdr-share
+    binary: herdr-share
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags: &ldflags
+      - -s -w
+      - -X github.com/jtsang4/herdr-share/internal/version.Version={{ .Version }}
+      - -X github.com/jtsang4/herdr-share/internal/version.Commit={{ .FullCommit }}
+      - -X github.com/jtsang4/herdr-share/internal/version.Date={{ .CommitDate }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: herdr-share-relay
+    main: ./cmd/herdr-share-relay
+    binary: herdr-share-relay
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags: *ldflags
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  # The sharer's CLI (it carries the Herdr mod and installs it).
+  - id: herdr-share
+    ids: [herdr-share]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "herdr-share_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+  # The relay, for running without a container.
+  - id: herdr-share-relay
+    ids: [herdr-share-relay]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "herdr-share-relay_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - docs/deploy.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+dockers_v2:
+  - id: herdr-share-relay
+    ids: [herdr-share-relay]
+    dockerfile: build/package/Dockerfile
+    images:
+      - ghcr.io/jtsang4/herdr-share-relay
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .Prerelease }}{{ .Major }}.{{ .Minor }}{{ end }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      org.opencontainers.image.title: herdr-share-relay
+      org.opencontainers.image.description: "Relay for sharing live Herdr terminal sessions, end-to-end encrypted"
+      org.opencontainers.image.source: "https://github.com/jtsang4/herdr-share"
+      org.opencontainers.image.url: "https://github.com/jtsang4/herdr-share"
+      org.opencontainers.image.licenses: MIT
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .Date }}"
+    # Index annotations only exist for multi-platform pushes; snapshot builds
+    # load one image per platform, so they are left empty (and thus skipped).
+    annotations:
+      "manifest:org.opencontainers.image.description": "Relay for sharing live Herdr terminal sessions, end-to-end encrypted"
+      "manifest:org.opencontainers.image.source": "https://github.com/jtsang4/herdr-share"
+      "manifest:org.opencontainers.image.licenses": MIT
+      "index:org.opencontainers.image.description": "{{ if not .IsSnapshot }}Relay for sharing live Herdr terminal sessions, end-to-end encrypted{{ end }}"
+      "index:org.opencontainers.image.source": "{{ if not .IsSnapshot }}https://github.com/jtsang4/herdr-share{{ end }}"
+      "index:org.opencontainers.image.licenses": "{{ if not .IsSnapshot }}MIT{{ end }}"
+    sbom: true
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs(\(.+\))?:'
+      - '^test(\(.+\))?:'
+      - '^ci(\(.+\))?:'
+      - '^chore(\(.+\))?:'
+
+release:
+  github:
+    owner: jtsang4
+    name: herdr-share
+  prerelease: auto
+  footer: |
+    **Relay image:** `ghcr.io/jtsang4/herdr-share-relay:{{ .Version }}`
+
+    **Install the CLI and the Herdr mod:**
+    ```sh
+    curl -fsSL https://raw.githubusercontent.com/jtsang4/herdr-share/main/scripts/install.sh | sh
+    ```

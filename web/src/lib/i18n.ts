@@ -15,6 +15,7 @@ const en = {
 	timeLeft: (s: string) => `${s} left`,
 	noExpiry: 'No time limit',
 	endedTitle: 'Sharing has ended',
+	endedChip: 'Ended',
 	ended: {
 		stopped: 'The sharer stopped sharing.',
 		expired: 'The share link expired.',
@@ -61,6 +62,7 @@ const zh: Strings = {
 	timeLeft: (s: string) => `剩余 ${s}`,
 	noExpiry: '不限时',
 	endedTitle: '分享已结束',
+	endedChip: '已结束',
 	ended: {
 		stopped: '分享者已停止分享。',
 		expired: '分享链接已过期。',

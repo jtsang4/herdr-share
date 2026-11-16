@@ -105,7 +105,9 @@ type RunParams struct {
 	Env      map[string]string `json:"env,omitempty"`
 	NoParent bool              `json:"no_parent,omitempty"`
 	NoNotify bool              `json:"no_notify,omitempty"`
-	Size     *struct {
+	// Remove is terminal.run's `rm`: forget the terminal once it exits.
+	Remove bool `json:"rm,omitempty"`
+	Size   *struct {
 		Cols int `json:"cols"`
 		Rows int `json:"rows"`
 	} `json:"size,omitempty"`

@@ -260,6 +260,7 @@ func (a *app) start(ctx context.Context, ref string, f shareFlags) error {
 		Env:      env,
 		NoParent: true,
 		NoNotify: true,
+		Remove:   true,
 		Size: &struct {
 			Cols int `json:"cols"`
 			Rows int `json:"rows"`
@@ -283,6 +284,13 @@ func (a *app) start(ctx context.Context, ref string, f shareFlags) error {
 			return a.reportStart(res.Record, f.copyLink, false)
 		}
 		t, err := hc.Get(ctx, bt.Address)
+		if hcclient.IsKind(err, "not_found") {
+			// Removed after it exited; its ready file may have just appeared.
+			if b, rerr := os.ReadFile(ready); rerr == nil && len(b) > 0 { //nolint:gosec // our own state folder
+				continue
+			}
+			return fmt.Errorf("the bridge exited before the share went live; see %s", filepath.Join(a.paths.LogDir(), id+".log"))
+		}
 		if err == nil && !t.Live() {
 			out, _ := hc.Read(ctx, bt.Address, 50)
 			_ = hc.Remove(ctx, bt.Address)

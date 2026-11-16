@@ -26,7 +26,9 @@
 				<Icon name="lock" size={13} />
 				<span class="hide-sm">{t.e2ee}</span>
 			</span>
-			{#if share.viewers > 0}
+			{#if share.phase === 'ended'}
+				<span class="chip" data-testid="ended">{t.endedChip}</span>
+			{:else if share.viewers > 0}
 				<span class="chip" data-testid="viewers">
 					<Icon name="users" size={13} />
 					{t.viewers(share.viewers)}

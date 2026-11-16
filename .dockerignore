@@ -1,0 +1,8 @@
+.git
+bin
+dist
+**/node_modules
+web/.svelte-kit
+web/build/app
+test/browser/test-results
+test/browser/playwright-report

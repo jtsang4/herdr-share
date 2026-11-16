@@ -68,13 +68,15 @@
 	.stage {
 		flex: 1;
 		min-height: 0;
-		display: grid;
-		place-items: center;
+		display: flex;
 		padding: var(--s-5);
 		overflow: auto;
 	}
 
 	.frame {
+		/* Safe centering: a grid too large for the window scrolls instead of
+		   being cut off at the top and left. */
+		margin: auto;
 		padding: 8px;
 		background: var(--term-bg);
 		border-radius: var(--radius-lg);

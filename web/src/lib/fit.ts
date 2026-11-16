@@ -1,6 +1,6 @@
 import type { Terminal } from '@xterm/xterm';
 
-const MIN = 6;
+const MIN = 5;
 const MAX = 20;
 
 /**

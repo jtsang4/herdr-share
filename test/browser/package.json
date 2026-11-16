@@ -1,0 +1,17 @@
+{
+	"name": "herdr-share-browser-e2e",
+	"private": true,
+	"type": "module",
+	"description": "Drives the guest web client in a real browser for scripts/e2e.sh.",
+	"license": "MIT",
+	"scripts": {
+		"guest": "node guest.mjs"
+	},
+	"engines": {
+		"node": ">=24"
+	},
+	"packageManager": "pnpm@12.21.0",
+	"devDependencies": {
+		"playwright": "^1.65.1"
+	}
+}

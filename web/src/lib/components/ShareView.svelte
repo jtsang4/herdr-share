@@ -71,7 +71,7 @@
 
 	.banner {
 		position: fixed;
-		top: calc(var(--bar-h) + var(--s-3));
+		bottom: var(--s-6);
 		left: 50%;
 		transform: translateX(-50%);
 		max-width: calc(100vw - 32px);
@@ -89,7 +89,7 @@
 	@keyframes drop {
 		from {
 			opacity: 0;
-			transform: translate(-50%, -6px);
+			transform: translate(-50%, 6px);
 		}
 	}
 </style>
