@@ -150,14 +150,22 @@ export default class HerdrShare extends View {
     if (!pane) return "";
     for (const s of spaces()) {
       const tab = s.tabs.find((t) => t.id === pane.tab);
-      if (tab) return [s.name, tab.name].filter(Boolean).join(" · ");
+      // An unnamed tab is just its position ("2"): leave it out.
+      if (tab) return [s.name, tab.named ? tab.name : ""].filter(Boolean).join(" · ");
     }
     return "";
   }
 
+  // What runs in the target, for the dialog's subtitle: its title unless that
+  // is just its address, else the program's name.
   title() {
     const pane = panes().find((p) => p.terminal === this.target);
-    return pane?.title || pane?.program?.name || this.target || "";
+    const title = pane?.title && pane.title !== this.target ? pane.title : "";
+    return title || pane?.program?.name || this.target || "";
+  }
+
+  subtitle(title) {
+    return [title || this.title(), this.label() || this.target].filter(Boolean).join(" · ");
   }
 
   act(cx, what, fn) {
@@ -227,6 +235,12 @@ export default class HerdrShare extends View {
       if (r.code !== 0) throw errorOf(r);
       await this.reloadShares();
     });
+  }
+
+  // Adds time to the current expiry (the CLI sets a lifetime counted from now).
+  addTime(cx, s, seconds) {
+    const left = s.expires_at && !s.expires_at.startsWith("0001-") ? Math.max(0, (Date.parse(s.expires_at) - Date.now()) / 1000) : 0;
+    this.extend(cx, s, `${Math.round(left + seconds)}s`);
   }
 
   extend(cx, s, ttl) {
@@ -314,7 +328,7 @@ export default class HerdrShare extends View {
           .min_w(0)
           .gap(2)
           .child(div().text_size(15).font_semibold().text_color(t.foreground).child(title))
-          .when(Boolean(sub), (el) => el.child(div().text_size(12).text_color(t.muted).truncate().child(sub))),
+          .when(Boolean(sub), (el) => el.child(div().text_size(12).text_color(t.muted).child(sub))),
       )
       .child(div().text_size(11).text_color(t.dim).child("Esc"));
   }
@@ -342,7 +356,7 @@ export default class HerdrShare extends View {
     const mode = MODES.find((m) => m.id === this.mode);
     return v_flex()
       .gap(16)
-      .child(this.header("Share this session", `${this.title()} · ${this.target}`))
+      .child(this.header("Share this session", this.subtitle()))
       .child(this.field("Who can type", this.segmented("hs-mode", MODES, this.mode, (id, cx) => { this.mode = id; cx.notify(); }), mode.hint))
       .child(this.field("Link works for", this.segmented("hs-ttl", TTLS, this.ttl, (id, cx) => { this.ttl = id; cx.notify(); })))
       .when(this.mode === "control", (el) =>
@@ -372,7 +386,7 @@ export default class HerdrShare extends View {
     const viewers = s.guests ?? [];
     return v_flex()
       .gap(16)
-      .child(this.header("Sharing this session", `${s.title || this.title()} · ${s.terminal}`))
+      .child(this.header("Sharing this session", this.subtitle(s.title)))
       .child(
         h_flex()
           .gap(8)
@@ -403,7 +417,7 @@ export default class HerdrShare extends View {
           .gap(8)
           .items_center()
           .child(div().flex_1().text_size(12.5).text_color(t.foreground).child(remaining(s.expires_at)))
-          .child(this.button("hs-extend-30", "+30 min", "ghost", (cx) => this.extend(cx, s, "30m")))
+          .when(Boolean(s.expires_at) && !s.expires_at.startsWith("0001-"), (el) => el.child(this.button("hs-extend-30", "+30 min", "ghost", (cx) => this.addTime(cx, s, 1800))))
           .child(this.button("hs-extend-2h", "2 hours from now", "ghost", (cx) => this.extend(cx, s, "2h"))),
       )
       .child(
