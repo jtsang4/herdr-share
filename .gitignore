@@ -1,0 +1,26 @@
+# Build output
+/dist/
+/bin/
+*.exe
+*.test
+*.out
+coverage.*
+
+# Local data and secrets
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# End-to-end test artifacts
+/test/browser/test-results/
+/test/browser/playwright-report/
+
+# Editors and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
