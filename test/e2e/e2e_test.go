@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -516,3 +517,66 @@ func TestShareEndsWhenRelayStaysUnreachable(t *testing.T) {
 
 // close stops accepting connections.
 func (p *cutProxy) close() { _ = p.ln.Close() }
+
+// Guests coming and going must not leave goroutines or herdr-core attach
+// streams behind in the bridge.
+func TestGuestsComingAndGoingLeakNothing(t *testing.T) {
+	hc := needCore(t)
+	term := echoTerminal(t, hc)
+	env := startRelay(t, relay.Config{MaxGuests: 50, JoinRate: 10000})
+	b, _ := startBridge(t, bridge.Options{Terminal: term.Address, RelayURL: env.url, TTL: time.Hour, Mode: wire.ModeControl})
+	link := b.Snapshot().Link
+
+	cycle := func(n int) {
+		for i := 0; i < n; i++ {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			g, err := guest.Dial(ctx, link, fmt.Sprintf("g%d", i), nil)
+			if err != nil {
+				cancel()
+				t.Fatal(err)
+			}
+			// Wait until the bridge streams to it, and type once.
+			for {
+				ev, err := g.Next(ctx)
+				if err != nil {
+					cancel()
+					t.Fatalf("guest %d: %v", i, err)
+				}
+				if ev.Kind == "output" {
+					break
+				}
+			}
+			_ = g.Type(ctx, []byte("x\r"))
+			_ = g.Close()
+			cancel()
+		}
+		// Let leaves propagate.
+		deadline := time.Now().Add(10 * time.Second)
+		for len(b.Snapshot().Guests) > 0 && time.Now().Before(deadline) {
+			time.Sleep(50 * time.Millisecond)
+		}
+		if n := len(b.Snapshot().Guests); n != 0 {
+			t.Fatalf("%d guests still listed", n)
+		}
+	}
+
+	cycle(10) // warm up: lazily created pieces (the input attach) exist now
+	time.Sleep(500 * time.Millisecond)
+	base := runtime.NumGoroutine()
+	cycle(100)
+	var now int
+	for i := 0; i < 50; i++ {
+		time.Sleep(100 * time.Millisecond)
+		if now = runtime.NumGoroutine(); now <= base+3 {
+			break
+		}
+	}
+	if now > base+3 {
+		buf := make([]byte, 1<<20)
+		t.Fatalf("goroutines grew from %d to %d after 100 guests:\n%s", base, now, buf[:runtime.Stack(buf, true)])
+	}
+	// The relay agrees: the share is still there, with nobody connected.
+	if shares, guests := env.srv.Stats(); shares != 1 || guests != 0 {
+		t.Fatalf("relay still has %d shares, %d guests", shares, guests)
+	}
+}
