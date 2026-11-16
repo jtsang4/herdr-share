@@ -22,19 +22,19 @@ docker run -d --name herdr-share-relay -p 8080:8080 \
 
 公网使用请放在 HTTPS 后面（仓库里有带 Caddy 的 [compose 文件](deploy/docker-compose.yml)）。
 
-**2. 在分享者的机器上安装 CLI 和 Herdr mod**（macOS / Linux；Windows 从 [Releases](https://github.com/jtsang4/herdr-share/releases) 下载 zip）：
+**2. 在分享者的机器上把分享对话框装进 Herdr**（macOS / Linux / Windows，需要 Node.js 22 及以上）：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jtsang4/herdr-share/main/scripts/install.sh | sh
+npx -y herdr-share@latest mod install
 ```
 
-这会把 `herdr-share` 装到 `~/.local/bin`，在 Herdr 里加入分享对话框，并绑定 **⌘⇧S**（Linux/Windows 为 Ctrl+Shift+S）来打开它。除了这个对话框，不会往窗口里加任何东西，也不改你的布局。设置 `HERDR_SHARE_NO_BIND=1` 则不改动你的 `keys.json`。
+不会全局安装任何东西：npx 拉取 npm 包，由它从 release 下载对应平台的原生二进制并校验 SHA-256，二进制就放在包里（npx 的缓存中）。这一步在 Herdr 里加入分享对话框，并绑定 **⌘⇧S**（Linux/Windows 为 Ctrl+Shift+S）打开它，不改你的布局；加 `--no-bind` 则不改动 `keys.json`。
 
 ![Herdr 里的分享对话框](docs/images/share-dialog.png)
 
 **3. 分享**：在 Herdr 里聚焦要分享的终端，按 **⌘⇧S**。第一次会让你填中继地址（和 token）；之后选择“谁能操作”和“链接有效期”，点 **Start sharing**，链接自动复制，发给对方即可。
 
-命令行同样可以：
+命令行同样可以（下面的 `herdr-share` 指 `npx --prefer-offline -y herdr-share`；全局安装过则直接用命令）：
 
 ```sh
 herdr-share config set relay https://share.example.com
@@ -44,7 +44,27 @@ herdr-share mode t7 control                        # 允许对方操作
 herdr-share stop t7                                # 链接立即失效
 ```
 
+**也可以直接让 coding agent 来做**：装一次 skill，然后说“把当前会话只读分享给 Alice，30 分钟”即可：
+
+```sh
+npx skills add jtsang4/herdr-share --skill herdr-share
+```
+
 分享者和被分享者的完整使用流程见 [docs/usage.md](docs/usage.md)。
+
+## 安装、更新与卸载
+
+| | npx（推荐） | npm 全局安装 | 安装脚本 / 手动 |
+|---|---|---|---|
+| 安装 | `npx -y herdr-share@latest mod install` | `npm i -g herdr-share && herdr-share mod install` | `curl -fsSL https://raw.githubusercontent.com/jtsang4/herdr-share/main/scripts/install.sh \| sh` |
+| 日常使用 | `npx --prefer-offline -y herdr-share …` | `herdr-share …` | `herdr-share …` |
+| 更新 | `npx -y herdr-share@latest version` | `npm i -g herdr-share@latest` | 重新运行安装脚本 |
+| 卸载 | `npx -y herdr-share uninstall` | `herdr-share uninstall && npm uninstall -g herdr-share` | `herdr-share uninstall`，再删掉 `~/.local/bin/herdr-share` |
+
+- **默认就是 npx 模式**：不往 PATH 里放任何东西，Herdr 里的 mod 通过 `npx -y herdr-share@<版本>` 调用（走 npx 缓存）。如果选择全局安装，`herdr-share` 命令放在 npm 正常的全局 bin 目录，二进制随包放在全局 `node_modules` 里。
+- **不会反复下载，也不会每次查版本**：同一版本的二进制只下载一次；`--prefer-offline` 让 npx 直接用缓存、不去问 registry，首次之后每条命令都能离线运行，体验和全局命令一样。只有带 `@latest` 时才检查新版本。
+- **更新**（需要时执行一次 `@latest`）只下载一次新版本，并自动刷新 Herdr 里的 mod；正在进行的分享继续用旧二进制直到结束。
+- **`herdr-share uninstall`** 会停止所有分享、移除 Herdr mod 和快捷键、删除配置与状态（加 `--keep-config` 保留配置）。
 
 ## 安全
 

@@ -47,7 +47,4 @@ make hooks       # optional pre-commit hooks (lefthook)
 
 ## Releasing
 
-Push a tag `vX.Y.Z` on `main`. The release workflow builds the CLI and relay for every platform,
-publishes `ghcr.io/jtsang4/herdr-share-relay:X.Y.Z` (and `X.Y`, `latest`) for amd64 and arm64, and
-creates the GitHub release with checksums. Tags with a pre-release suffix (`v1.0.0-rc.1`) publish a
-pre-release and do not move `latest`.
+See [docs/releasing.md](docs/releasing.md).

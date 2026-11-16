@@ -17,10 +17,13 @@ This guide walks through sharing from both sides: **you**, sharing a session fro
 
 1. Someone deploys a relay ([deploy.md](deploy.md)) and gives you its address and, if it uses one,
    a token.
-2. Install herdr-share and the Herdr mod:
+2. Add the Share dialog to Herdr (Node.js 22+; nothing to install globally):
    ```sh
-   curl -fsSL https://raw.githubusercontent.com/jtsang4/herdr-share/main/scripts/install.sh | sh
+   npx -y herdr-share@latest mod install
    ```
+   In the rest of this guide, `herdr-share` stands for `npx --prefer-offline -y herdr-share` (cached,
+   no registry check after the first run), or the command itself if you installed it with
+   `npm i -g herdr-share` or the install script.
 3. Tell herdr-share where the relay is. Either open the Share dialog (below) — it asks the first
    time — or:
    ```sh
@@ -79,6 +82,30 @@ named terminal can be given by name). Defaults for `--mode` and `--ttl` come fro
 - **The relay connection drops.** The bridge reconnects by itself; viewers see “The sharer is
   offline…” and continue where they were once it is back. If the relay restarts, its shares are
   gone: start sharing again and send the new link.
+
+### From your coding agent
+
+Install the skill once: `npx skills add jtsang4/herdr-share --skill herdr-share`. Then ask in plain
+words — “share this session view-only for 30 minutes”, “let them type”, “who is watching?”, “stop
+sharing”. The agent shares its own terminal (`$HC_TERMINAL_ID`) or the one you name, hands you the
+link, and asks before allowing typing.
+
+## Updating and uninstalling
+
+- **Update**: `npx -y herdr-share@latest version` (or `npm i -g herdr-share@latest`). That is the only
+  command that checks for a new version; it downloads it once and refreshes the Herdr mod. Running
+  shares finish on the old binary.
+- **Uninstall**: `herdr-share uninstall` stops every share, removes the Herdr mod and its key binding,
+  and deletes settings and state (`--keep-config` keeps them). With npx there is nothing else to
+  remove; after a global install, `npm uninstall -g herdr-share`.
+
+## When does a share's process end?
+
+The bridge for a share is a background herdr-core terminal. It exits — and herdr-core removes its
+record — when you stop the share, when it expires (enforced on your machine as well as by the
+relay), when the shared terminal ends, when the relay no longer knows the share (e.g. it restarted),
+after 10 minutes without reaching the relay, or after 2 minutes without herdr-core. Closing the Herdr
+window does not stop it. `herdr-share list` shows every share still running.
 
 ## Watching (them)
 

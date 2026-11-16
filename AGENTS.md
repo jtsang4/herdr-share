@@ -26,12 +26,17 @@ they may type. Traffic between the sharer's bridge and viewers is end-to-end enc
   `herdr-share mod install`.
 - `build/package/Dockerfile`: the release image (GoReleaser, prebuilt binaries); `Dockerfile`: the
   image from source.
+- `build/npm`: the `herdr-share` npm launcher. It contains no binary; it downloads release assets
+  named `herdr-share_<version>_<os>_<arch>[.exe]`, which must stay in sync with `.goreleaser.yaml`.
+- `skills/herdr-share`: the user-facing agent skill (`npx skills add jtsang4/herdr-share --skill
+  herdr-share`). Keep it in step with the CLI's commands and flags.
+- `docs/releasing.md`: how releases, the image and npm publishing work.
 
 ## Commands
 
 ```sh
 make web build    # web client, then ./bin/herdr-share and ./bin/herdr-share-relay
-make test         # go test, svelte-check, vitest
+make test         # go test, svelte-check, vitest, npm launcher tests
 make lint         # golangci-lint, oxfmt, oxlint
 make e2e          # scripts/e2e.sh: isolated herdr-core, relay, CLI, mod check, real browser
 ```

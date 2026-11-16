@@ -50,22 +50,24 @@ docker run -d --name herdr-share-relay -p 8080:8080 \
 
 Put it behind HTTPS for use over the internet (a [compose file with Caddy](deploy/docker-compose.yml) is included).
 
-**2. Install the CLI and the Herdr mod** on the machine you share from (macOS or Linux; Windows:
-download the zip from [Releases](https://github.com/jtsang4/herdr-share/releases)):
+**2. Add the Share dialog to Herdr** on the machine you share from (macOS, Linux or Windows, with
+Node.js 22 or later):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jtsang4/herdr-share/main/scripts/install.sh | sh
+npx -y herdr-share@latest mod install
 ```
 
-This installs `herdr-share` into `~/.local/bin`, adds the Share dialog to Herdr and binds
-**⌘⇧S** (Ctrl+Shift+S on Linux/Windows) to open it — the dialog is the only thing added to your
-window; your layout is not changed. `HERDR_SHARE_NO_BIND=1` leaves your `keys.json` alone.
+Nothing is installed globally: npx fetches the package, which downloads the native binary for your
+platform from the release and verifies its checksum (it lives inside the package, in npx's cache).
+This adds the Share dialog to Herdr and binds **⌘⇧S** (Ctrl+Shift+S on Linux/Windows) to open it — your layout is not changed.
+`--no-bind` leaves your `keys.json` alone.
 
 **3. Share.** Focus the terminal in Herdr and press **⌘⇧S**. The first time, enter your relay's
 address (and token). Then pick who can type and how long the link works, and click
 **Start sharing** — the link is copied. Send it to whoever should watch.
 
-The same from a terminal:
+The same from a terminal (`herdr-share` below means `npx --prefer-offline -y herdr-share`, or the
+command itself if you installed it globally):
 
 ```sh
 herdr-share config set relay https://share.example.com
@@ -74,6 +76,35 @@ herdr-share start t7 --mode view --ttl 2h --copy   # t7: the terminal (see `hc l
 herdr-share mode t7 control                        # let viewers type
 herdr-share stop t7                                # the link stops working now
 ```
+
+**Or ask your coding agent.** Install the skill once and say “share this session with Alice, view
+only, for 30 minutes”:
+
+```sh
+npx skills add jtsang4/herdr-share --skill herdr-share
+```
+
+## Install, update, uninstall
+
+| | With npx (recommended) | Global npm install | Install script / manual |
+|---|---|---|---|
+| Install | `npx -y herdr-share@latest mod install` | `npm i -g herdr-share && herdr-share mod install` | `curl -fsSL https://raw.githubusercontent.com/jtsang4/herdr-share/main/scripts/install.sh \| sh` |
+| Use | `npx --prefer-offline -y herdr-share …` | `herdr-share …` | `herdr-share …` |
+| Update | `npx -y herdr-share@latest version` | `npm i -g herdr-share@latest` | run the script again |
+| Uninstall | `npx -y herdr-share uninstall` | `herdr-share uninstall && npm uninstall -g herdr-share` | `herdr-share uninstall`, then delete `~/.local/bin/herdr-share` |
+
+- **npx is the default.** Nothing lands in your PATH; the Herdr mod calls
+  `npx -y herdr-share@<version>`, served from npx's cache. A global install instead puts the
+  `herdr-share` command in npm's normal global bin folder, with its binary inside npm's global
+  `node_modules`.
+- **No repeated downloads or version checks.** The binary is downloaded once per version and reused.
+  `--prefer-offline` makes npx use its cache without asking the registry, so after the first run
+  every command works offline, like a global command. Only `@latest` checks for a new version.
+- **Updating** (`@latest`, when you want it) fetches the new version once and refreshes the Herdr mod
+  automatically. Running shares keep going on the old binary until they end.
+- **`herdr-share uninstall`** stops every share, removes the Herdr mod and its key binding, and
+  deletes settings and state (`--keep-config` keeps them).
+- Windows: use npx or download the zip from [Releases](https://github.com/jtsang4/herdr-share/releases).
 
 The full walkthrough for sharers and viewers is in [docs/usage.md](docs/usage.md).
 
