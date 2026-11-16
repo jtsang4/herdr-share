@@ -17,6 +17,20 @@ the first run), or `herdr-share` if the user installed it globally. Below,
 `herdr-share` stands for whichever applies. Add `--json` to every command you parse.
 Never put the relay token on a command line that you echo back to the user, and never print it.
 
+## The usual request, end to end
+
+"Share this session, viewers can type, 24 hours, relay https://share.example.com" means:
+
+1. If the request names a relay, save it: `herdr-share config set relay <url>` (it is remembered, so
+   later requests need not repeat it). If it names none and `herdr-share config get relay` is empty,
+   ask for the relay address; never invent one.
+2. `herdr-share start "$HC_TERMINAL_ID" --mode control --ttl 24h --json`.
+3. Reply with the **full** link, the mode, when it ends, and how to stop it ("ask me to stop sharing",
+   or `herdr-share stop <id>`). For control mode, say once that anyone with the link can run
+   commands as the user — the user asked for it, so do not ask again for confirmation.
+
+If the relay answers that it needs a token, ask the user for it and `config set token` it.
+
 ## Which terminal
 
 - **"Share this session / share me"** from inside Herdr: the current terminal is `$HC_TERMINAL_ID`
@@ -31,7 +45,7 @@ herdr-share start "$HC_TERMINAL_ID" --mode view --ttl 2h --json [--label "<space
 ```
 
 - `--mode view` is the default. Use `--mode control` only when the user explicitly wants viewers to
-  type. Before doing so, say plainly that anyone with the link can then run commands as them.
+  type ("可操作", "can type", "let them take over", "control mode").
 - `--ttl`: `30m`, `2h`, `8h`, … or `0` for until stopped (the relay may cap it). Default from config.
 - The JSON has `link`, `id`, `mode`, `expires_at`, `existing` (already shared: the existing link is
   returned). Give the user the **full** link — the part after `#` is the key; a truncated link does
