@@ -13,13 +13,14 @@ func TestParseTTL(t *testing.T) {
 	}{
 		{"30m", 30 * time.Minute}, {"2h", 2 * time.Hour}, {"90", 90 * time.Minute},
 		{"0", 0}, {"never", 0}, {"until-stopped", 0}, {" 1h30m ", 90 * time.Minute},
+		{"7d", 7 * 24 * time.Hour}, {"1d12h", 36 * time.Hour}, {"2D", 48 * time.Hour},
 	} {
 		got, err := ParseTTL(c.in)
 		if err != nil || got != c.want {
 			t.Errorf("ParseTTL(%q) = %v, %v; want %v", c.in, got, err, c.want)
 		}
 	}
-	for _, bad := range []string{"", "soon", "10s", "-5m"} {
+	for _, bad := range []string{"", "soon", "10s", "-5m", "d", "7x"} {
 		if _, err := ParseTTL(bad); err == nil {
 			t.Errorf("ParseTTL(%q) accepted", bad)
 		}

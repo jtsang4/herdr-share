@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jtsang4/herdr-share/internal/config"
 	"github.com/jtsang4/herdr-share/internal/relay"
 	"github.com/jtsang4/herdr-share/internal/version"
 )
@@ -39,17 +40,32 @@ func envInt(name string, def int) int {
 	return def
 }
 
-func envDuration(name string, def time.Duration) time.Duration {
-	if v := os.Getenv(name); v != "" {
-		if v == "0" {
-			return 0
-		}
-		if d, err := time.ParseDuration(v); err == nil {
-			return d
-		}
-		fmt.Fprintf(os.Stderr, "ignoring %s=%q: not a duration\n", name, v)
+// durationFlag accepts Go durations plus days ("168h", "7d", "1d12h") and 0.
+type durationFlag struct{ d time.Duration }
+
+func (f *durationFlag) String() string { return f.d.String() }
+
+func (f *durationFlag) Set(v string) error {
+	if strings.TrimSpace(v) == "0" {
+		f.d = 0
+		return nil
 	}
-	return def
+	d, err := config.ParseDuration(v)
+	if err != nil {
+		return err
+	}
+	f.d = d
+	return nil
+}
+
+func envDuration(name string, def time.Duration) *durationFlag {
+	f := &durationFlag{d: def}
+	if v := os.Getenv(name); v != "" {
+		if err := f.Set(v); err != nil {
+			fmt.Fprintf(os.Stderr, "ignoring %s=%q: not a duration (examples: 24h, 7d, 0)\n", name, v)
+		}
+	}
+	return f
 }
 
 func envBool(name string, def bool) bool {
@@ -82,10 +98,11 @@ func run() int {
 		publicURL   = flag.String("public-url", env("HERDR_SHARE_PUBLIC_URL", ""), "base URL guests use, e.g. https://share.example.com (env HERDR_SHARE_PUBLIC_URL)")
 		tokens      = flag.String("tokens", env("HERDR_SHARE_TOKENS", ""), "comma-separated tokens required to create shares; empty: anyone can (env HERDR_SHARE_TOKENS)")
 		tokensFile  = flag.String("tokens-file", env("HERDR_SHARE_TOKENS_FILE", ""), "file with one token per line (env HERDR_SHARE_TOKENS_FILE)")
+		openNets    = flag.String("open-networks", env("HERDR_SHARE_OPEN_NETWORKS", ""), "comma-separated networks (CIDRs or addresses) that may create shares without a token (env HERDR_SHARE_OPEN_NETWORKS)")
 		maxShares   = flag.Int("max-shares", envInt("HERDR_SHARE_MAX_SHARES", 1000), "maximum concurrent shares (env HERDR_SHARE_MAX_SHARES)")
 		maxGuests   = flag.Int("max-guests", envInt("HERDR_SHARE_MAX_GUESTS", 20), "maximum viewers per share (env HERDR_SHARE_MAX_GUESTS)")
-		maxTTL      = flag.Duration("max-ttl", envDuration("HERDR_SHARE_MAX_TTL", 24*time.Hour), "longest a share may last; 0 = unlimited (env HERDR_SHARE_MAX_TTL)")
-		grace       = flag.Duration("resume-grace", envDuration("HERDR_SHARE_RESUME_GRACE", 2*time.Minute), "how long a share waits for its bridge to reconnect (env HERDR_SHARE_RESUME_GRACE)")
+		maxTTL      = envDuration("HERDR_SHARE_MAX_TTL", 24*time.Hour)
+		grace       = envDuration("HERDR_SHARE_RESUME_GRACE", 2*time.Minute)
 		trustProxy  = flag.Bool("trust-proxy", envBool("HERDR_SHARE_TRUST_PROXY", false), "trust X-Forwarded-* headers from a reverse proxy (env HERDR_SHARE_TRUST_PROXY)")
 		origins     = flag.String("allowed-origins", env("HERDR_SHARE_ALLOWED_ORIGINS", ""), "extra Origin host patterns for guest WebSockets (env HERDR_SHARE_ALLOWED_ORIGINS)")
 		logFormat   = flag.String("log-format", env("HERDR_SHARE_LOG_FORMAT", "text"), "text or json (env HERDR_SHARE_LOG_FORMAT)")
@@ -93,6 +110,8 @@ func run() int {
 		showVersion = flag.Bool("version", false, "print the version and exit")
 		healthcheck = flag.Bool("healthcheck", false, "check the local relay's /healthz and exit (for container health checks)")
 	)
+	flag.Var(maxTTL, "max-ttl", "longest a share may last: 24h, 7d, 0 = unlimited (env HERDR_SHARE_MAX_TTL)")
+	flag.Var(grace, "resume-grace", "how long a share waits for its bridge to reconnect (env HERDR_SHARE_RESUME_GRACE)")
 	flag.Parse()
 
 	if *showVersion {
@@ -124,13 +143,20 @@ func run() int {
 		toks = append(toks, splitList(string(b))...)
 	}
 
+	nets, err := relay.ParseNetworks(splitList(*openNets))
+	if err != nil {
+		log.Error("invalid HERDR_SHARE_OPEN_NETWORKS", "err", err)
+		return 1
+	}
+
 	srv := relay.New(relay.Config{
 		PublicURL:      *publicURL,
 		Tokens:         toks,
+		OpenNetworks:   nets,
 		MaxShares:      *maxShares,
 		MaxGuests:      *maxGuests,
-		MaxTTL:         *maxTTL,
-		ResumeGrace:    *grace,
+		MaxTTL:         maxTTL.d,
+		ResumeGrace:    grace.d,
 		TrustProxy:     *trustProxy,
 		AllowedOrigins: splitList(*origins),
 		Logger:         log,
@@ -149,9 +175,16 @@ func run() int {
 		return 1
 	}
 	log.Info("herdr-share relay listening", "addr", ln.Addr().String(), "version", version.Version,
-		"public_url", *publicURL, "auth", len(toks) > 0, "max_ttl", maxTTL.String())
-	if len(toks) == 0 {
+		"public_url", *publicURL, "auth", len(toks) > 0, "max_ttl", maxTTL.d.String())
+	switch {
+	case len(toks) == 0:
 		log.Warn("no tokens configured: anyone who can reach this relay can create shares (set HERDR_SHARE_TOKENS)")
+	case len(nets) > 0:
+		names := make([]string, len(nets))
+		for i, n := range nets {
+			names[i] = n.String()
+		}
+		log.Info("shares from these networks need no token", "open_networks", strings.Join(names, ","))
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

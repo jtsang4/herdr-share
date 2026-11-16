@@ -8,7 +8,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -227,7 +229,35 @@ func NormalizeRelay(s string) (string, error) {
 	return u.String(), nil
 }
 
-// ParseTTL parses a share lifetime: a Go duration ("90m", "2h"), a number
+var dayUnit = regexp.MustCompile(`(\d+)d`)
+
+// ParseDuration is time.ParseDuration plus days: "7d", "1d12h".
+func ParseDuration(s string) (time.Duration, error) {
+	s = strings.TrimSpace(strings.ToLower(s))
+	var days int64
+	for _, m := range dayUnit.FindAllStringSubmatch(s, -1) {
+		n, err := strconv.ParseInt(m[1], 10, 64)
+		if err != nil || n > 100000 {
+			return 0, fmt.Errorf("invalid duration %q", s)
+		}
+		days += n
+	}
+	rest := dayUnit.ReplaceAllString(s, "")
+	d := time.Duration(days) * 24 * time.Hour
+	if rest == "" {
+		if days == 0 {
+			return 0, fmt.Errorf("invalid duration %q", s)
+		}
+		return d, nil
+	}
+	more, err := time.ParseDuration(rest)
+	if err != nil {
+		return 0, fmt.Errorf("invalid duration %q", s)
+	}
+	return d + more, nil
+}
+
+// ParseTTL parses a share lifetime: a duration ("90m", "2h", "7d"), a number
 // of minutes, or 0 / "never" / "none" for until stopped.
 func ParseTTL(s string) (time.Duration, error) {
 	s = strings.TrimSpace(strings.ToLower(s))
@@ -235,17 +265,16 @@ func ParseTTL(s string) (time.Duration, error) {
 	case "0", "never", "none", "forever", "until-stopped":
 		return 0, nil
 	}
-	if d, err := time.ParseDuration(s); err == nil {
+	if d, err := ParseDuration(s); err == nil {
 		if d < time.Minute {
 			return 0, fmt.Errorf("lifetime %s is shorter than a minute", d)
 		}
 		return d, nil
 	}
-	var mins int
-	if _, err := fmt.Sscan(s, &mins); err == nil && mins > 0 {
+	if mins, err := strconv.Atoi(s); err == nil && mins > 0 {
 		return time.Duration(mins) * time.Minute, nil
 	}
-	return 0, fmt.Errorf("invalid lifetime %q (examples: 30m, 2h, 0 for until stopped)", s)
+	return 0, fmt.Errorf("invalid lifetime %q (examples: 30m, 2h, 7d, 0 for until stopped)", s)
 }
 
 // WriteFileAtomic writes through a temporary file and a rename.

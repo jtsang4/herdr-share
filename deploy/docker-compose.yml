@@ -10,7 +10,9 @@ services:
       HERDR_SHARE_PUBLIC_URL: https://share.example.com
       HERDR_SHARE_TOKENS: ${HERDR_SHARE_TOKENS:?set HERDR_SHARE_TOKENS in .env}
       HERDR_SHARE_TRUST_PROXY: "true"
-      HERDR_SHARE_MAX_TTL: 24h
+      HERDR_SHARE_MAX_TTL: 24h # e.g. 7d for week-long shares, 0 for no cap
+      # Networks that may share without a token (optional), e.g. the office VPN:
+      # HERDR_SHARE_OPEN_NETWORKS: 10.0.0.0/8,192.168.0.0/16
       HERDR_SHARE_LOG_FORMAT: json
     expose:
       - "8080"

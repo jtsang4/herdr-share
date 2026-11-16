@@ -36,8 +36,9 @@ Flags and environment variables are equivalent.
 | `HERDR_SHARE_LISTEN` | `-listen` | `:8080` | Address to listen on |
 | `HERDR_SHARE_TOKENS` | `-tokens` | *(none)* | Comma-separated tokens required to create shares. Empty: anyone who can reach the relay can create shares |
 | `HERDR_SHARE_TOKENS_FILE` | `-tokens-file` | | File with one token per line (for secrets mounted as files) |
+| `HERDR_SHARE_OPEN_NETWORKS` | `-open-networks` | *(none)* | Comma-separated networks that may create shares **without** a token even when tokens are set, e.g. `10.0.0.0/8,192.168.1.0/24,fd00::/8`; single addresses work too. Invalid entries stop the relay at startup |
 | `HERDR_SHARE_PUBLIC_URL` | `-public-url` | | The URL viewers use, when it differs from the URL sharers configure (e.g. bridges reach the relay on an internal address) |
-| `HERDR_SHARE_MAX_TTL` | `-max-ttl` | `24h` | Longest a share may last; `0` = unlimited. “No limit” shares are capped to this |
+| `HERDR_SHARE_MAX_TTL` | `-max-ttl` | `24h` | Longest a share may last: `24h`, `168h` or `7d`, `0` = unlimited. “No limit” shares are capped to this |
 | `HERDR_SHARE_MAX_SHARES` | `-max-shares` | `1000` | Concurrent shares |
 | `HERDR_SHARE_MAX_GUESTS` | `-max-guests` | `20` | Viewers per share |
 | `HERDR_SHARE_RESUME_GRACE` | `-resume-grace` | `2m` | How long a share waits for its bridge to reconnect |
@@ -51,6 +52,18 @@ Endpoints: `/healthz` (liveness), `/api/v1/info` (version, protocol, whether a t
 
 **Use tokens** unless the relay is reachable only by people you trust. Give each person their own
 token so you can revoke one by removing it and restarting the relay.
+
+Three ways to run it:
+
+- **Open** (no `HERDR_SHARE_TOKENS`): anyone who can reach the relay can create shares. Fine on a
+  private network.
+- **Tokens**: every sharer configures a token.
+- **Tokens plus open networks**: sharers on the listed networks (office, VPN) need no token; everyone
+  else does. `/api/v1/info` answers `auth_required` for the caller, so the CLI and the Herdr dialog
+  only ask for a token where one is needed. Behind a reverse proxy, set `HERDR_SHARE_TRUST_PROXY` so
+  the relay sees the client's address (`X-Forwarded-For`) rather than the proxy's.
+
+Whatever the mode, sessions stay end-to-end encrypted and viewers only ever need the link.
 
 ## HTTPS and reverse proxies
 

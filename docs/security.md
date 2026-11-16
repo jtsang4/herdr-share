@@ -34,7 +34,10 @@ so viewers trust the relay operator to serve the genuine page. Run your own rela
 
 ## Relay hardening
 
-- Set `HERDR_SHARE_TOKENS` unless only trusted people can reach the relay.
+- Set `HERDR_SHARE_TOKENS` unless only trusted people can reach the relay. `HERDR_SHARE_OPEN_NETWORKS`
+  exempts trusted networks; only list networks whose members you trust, and enable
+  `HERDR_SHARE_TRUST_PROXY` only behind a proxy you control (otherwise `X-Forwarded-For` is ignored,
+  so it cannot be forged to get in).
 - Serve it over HTTPS on the internet.
 - The page is served with a strict CSP (no inline script except the hashed boot script, no
   third-party origins), `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`; viewer WebSockets

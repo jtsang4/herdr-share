@@ -353,3 +353,101 @@ func TestBehindPathPrefix(t *testing.T) {
 		t.Fatalf("asset %s: %d %q", asset, resp.StatusCode, resp.Header.Get("Cache-Control"))
 	}
 }
+
+func TestParseNetworks(t *testing.T) {
+	nets, err := ParseNetworks([]string{"10.0.0.0/8", " 192.168.1.7 ", "fd00::/8", "::ffff:172.16.0.1", ""})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, n := range nets {
+		got = append(got, n.String())
+	}
+	if want := "10.0.0.0/8 192.168.1.7/32 fd00::/8 172.16.0.1/32"; strings.Join(got, " ") != want {
+		t.Fatalf("got %v", got)
+	}
+	for _, bad := range []string{"10.0.0.0/33", "not-an-ip", "10.0.0/8"} {
+		if _, err := ParseNetworks([]string{bad}); err == nil {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}
+
+func TestOpenNetworksMatchClients(t *testing.T) {
+	nets, _ := ParseNetworks([]string{"10.0.0.0/8", "192.168.1.0/24", "fd00::/8"})
+	s := New(Config{Tokens: []string{"t"}, OpenNetworks: nets})
+	for ip, open := range map[string]bool{
+		"10.144.144.8":    true,
+		"192.168.1.200":   true,
+		"192.168.2.1":     false,
+		"::ffff:10.1.2.3": true,
+		"fd12::1":         true,
+		"2001:db8::1":     false,
+		"203.0.113.9":     false,
+		"garbage":         false,
+		"fe80::1%en0":     false,
+	} {
+		if got := !s.tokenRequired(ip); got != open {
+			t.Errorf("%s: open=%v, want %v", ip, got, open)
+		}
+	}
+	if (&Server{cfg: Config{OpenNetworks: nets}}).tokenRequired("203.0.113.9") {
+		t.Error("without tokens nobody needs one")
+	}
+}
+
+func TestOpenNetworksCreateWithoutToken(t *testing.T) {
+	loopback, _ := ParseNetworks([]string{"127.0.0.0/8", "::1"})
+	_, open := newTestServer(t, Config{Tokens: []string{"secret"}, OpenNetworks: loopback})
+	if _, m := create(t, open, "", 60); m.Type != wire.TypeCreated {
+		t.Fatalf("from an open network without a token: %+v", m)
+	}
+	if info := fetchInfo(t, open.URL, nil); info.AuthRequired {
+		t.Fatal("info should tell an open-network caller that no token is needed")
+	}
+
+	elsewhere, _ := ParseNetworks([]string{"10.0.0.0/8"})
+	_, closed := newTestServer(t, Config{Tokens: []string{"secret"}, OpenNetworks: elsewhere})
+	if _, m := create(t, closed, "", 60); m.Code != "unauthorized" {
+		t.Fatalf("outside the open networks without a token: %+v", m)
+	}
+	if _, m := create(t, closed, "secret", 60); m.Type != wire.TypeCreated {
+		t.Fatalf("outside the open networks with the token: %+v", m)
+	}
+	if info := fetchInfo(t, closed.URL, nil); !info.AuthRequired {
+		t.Fatal("info should ask a caller outside the open networks for a token")
+	}
+}
+
+func TestOpenNetworksBehindTrustedProxy(t *testing.T) {
+	office, _ := ParseNetworks([]string{"10.0.0.0/8"})
+	_, hs := newTestServer(t, Config{Tokens: []string{"secret"}, OpenNetworks: office, TrustProxy: true})
+	if info := fetchInfo(t, hs.URL, http.Header{"X-Forwarded-For": []string{"10.2.3.4, 172.16.0.1"}}); info.AuthRequired {
+		t.Fatal("the forwarded client is in the open network")
+	}
+	if info := fetchInfo(t, hs.URL, http.Header{"X-Forwarded-For": []string{"203.0.113.5"}}); !info.AuthRequired {
+		t.Fatal("the forwarded client is outside the open network")
+	}
+	_, untrusted := newTestServer(t, Config{Tokens: []string{"secret"}, OpenNetworks: office})
+	if info := fetchInfo(t, untrusted.URL, http.Header{"X-Forwarded-For": []string{"10.2.3.4"}}); !info.AuthRequired {
+		t.Fatal("a forged X-Forwarded-For must not open the relay without TrustProxy")
+	}
+}
+
+func fetchInfo(t *testing.T, base string, header http.Header) Info {
+	t.Helper()
+	req, _ := http.NewRequest(http.MethodGet, base+wire.InfoPath, nil)
+	for k, v := range header {
+		req.Header[k] = v
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var info Info
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		t.Fatal(err)
+	}
+	return info
+}

@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"regexp"
 	"strings"
 	"sync"
@@ -33,6 +34,10 @@ type Config struct {
 	PublicURL string
 	// Tokens, when not empty, are required to create shares.
 	Tokens []string
+	// OpenNetworks may create shares without a token even when Tokens are
+	// set (for example the office or VPN ranges). Matched against the client
+	// address, which honours X-Forwarded-For only with TrustProxy.
+	OpenNetworks []netip.Prefix
 	// MaxShares bounds concurrent shares (0: 1000).
 	MaxShares int
 	// MaxGuests bounds guests per share (0: 20).
@@ -158,22 +163,25 @@ func (s *Server) routes() {
 
 // Info is what GET /api/v1/info returns.
 type Info struct {
-	Name          string `json:"name"`
-	Version       string `json:"version"`
-	Protocol      int    `json:"protocol"`
-	AuthRequired  bool   `json:"auth_required"`
-	MaxTTLSeconds int64  `json:"max_ttl_seconds"`
-	MaxGuests     int    `json:"max_guests"`
+	Name     string `json:"name"`
+	Version  string `json:"version"`
+	Protocol int    `json:"protocol"`
+	// AuthRequired: whether this caller must present a token to create
+	// shares (false without tokens, or from an open network).
+	AuthRequired  bool  `json:"auth_required"`
+	MaxTTLSeconds int64 `json:"max_ttl_seconds"`
+	MaxGuests     int   `json:"max_guests"`
 }
 
-func (s *Server) handleInfo(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	_ = json.NewEncoder(w).Encode(Info{
-		Name:          "herdr-share-relay",
-		Version:       version.Version,
-		Protocol:      version.ProtocolVersion,
-		AuthRequired:  len(s.cfg.Tokens) > 0,
+		Name:     "herdr-share-relay",
+		Version:  version.Version,
+		Protocol: version.ProtocolVersion,
+		// Per caller: false for clients in an open network.
+		AuthRequired:  s.tokenRequired(s.clientIP(r)),
 		MaxTTLSeconds: int64(s.cfg.MaxTTL / time.Second),
 		MaxGuests:     s.cfg.MaxGuests,
 	})
@@ -321,7 +329,7 @@ func (s *Server) handleHost(w http.ResponseWriter, r *http.Request) {
 			fail(websocket.StatusTryAgainLater, wire.Control{Type: wire.TypeError, Code: "rate_limited", Message: "too many shares created; try again later"})
 			return
 		}
-		if !s.tokenOK(first.Token) {
+		if s.tokenRequired(ip) && !s.tokenOK(first.Token) {
 			s.log.Warn("share refused: bad token", "addr", ip)
 			fail(wire.CloseUnauthorized, wire.Control{Type: wire.TypeError, Code: "unauthorized", Message: "this relay requires a valid token"})
 			return

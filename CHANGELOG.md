@@ -4,6 +4,14 @@ Release notes for each version are published on the
 [GitHub releases page](https://github.com/jtsang4/herdr-share/releases), generated from commit
 messages. Notable changes are summarized here.
 
+## 0.1.3 — 2026-11-17
+
+- Relay: `HERDR_SHARE_OPEN_NETWORKS` (`-open-networks`) lets listed networks — CIDRs or single
+  addresses, comma-separated — create shares without a token while everyone else still needs one.
+  `/api/v1/info` now answers `auth_required` for the calling client.
+- Durations accept days: `HERDR_SHARE_MAX_TTL=7d`, `herdr-share start --ttl 3d`, `extend … 1d12h`.
+- `--ttl 7x` and similar typos are rejected instead of being read as 7 minutes.
+
 ## 0.1.2 — 2026-11-17
 
 - First release published to npm by the release workflow through trusted publishing.
