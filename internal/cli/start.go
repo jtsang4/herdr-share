@@ -161,7 +161,7 @@ terminal until you stop the share, it expires, or the terminal ends.
 If the terminal is already shared, its existing share is shown instead.`,
 		Example: `  herdr-share start t7
   herdr-share start t7 --mode control --ttl 30m --copy
-  herdr-share start review --label "voltdance · review" --json`,
+  herdr-share start review --label "acme-api · review" --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.start(cmd.Context(), args[0], f)

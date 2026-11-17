@@ -73,7 +73,7 @@ Closing the dialog changes nothing: the share keeps running in the background.
 `herdr-share` is `npx --prefer-offline -y herdr-share` (or the command, if installed globally):
 
 ```sh
-herdr-share start t7 --mode view --ttl 2h --copy --label "voltdance · review"
+herdr-share start t7 --mode view --ttl 2h --copy --label "acme-api · review"
 herdr-share list
 herdr-share status t7
 herdr-share mode t7 control      # or: view

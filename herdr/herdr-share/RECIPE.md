@@ -15,7 +15,7 @@ A dialog, 500px wide (`mod.json` overlay `dialog`), `popover` background, 18px p
 13px text. One of four bodies, plus an error box and a footer:
 
 - **Header** (every body): a 15px semibold title, under it a 12px `muted` subtitle — the program
-  and where it lives (`claude · voltdance`, `zsh · api · review`); an 11px `dim` `Esc` on the right.
+  and where it lives (`make test · acme-api · review`, `claude · api`); an 11px `dim` `Esc` on the right.
 - **Relay** (first run, or *Relay settings*): title `Relay`, subtitle *Where shared sessions are
   relayed…*. Two fields, each an 11.5px `dim` label over a 34px input (8px radius, `input` border,
   `background` fill, 12.8px): **Relay address** (placeholder `https://share.example.com`) and
